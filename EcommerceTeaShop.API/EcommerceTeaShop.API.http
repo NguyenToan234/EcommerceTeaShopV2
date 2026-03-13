@@ -1,0 +1,6 @@
+@EcommerceTeaShop.API_HostAddress = http://localhost:5182
+
+GET {{EcommerceTeaShop.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
