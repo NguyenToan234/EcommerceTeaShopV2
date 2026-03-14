@@ -36,17 +36,11 @@ namespace EcommerceTeaShop.API.Controllers.ClientController
         }
 
         // PayOS redirect khi thanh toán thành công
-        [HttpGet("/success")]
-        public async Task<IActionResult> Success(
+        [HttpGet("success")]
+        public IActionResult Success(
       [FromQuery] string status,
-      [FromQuery] long orderCode
-  )
+      [FromQuery] long orderCode)
         {
-            if (status == "PAID")
-            {
-                await _orderService.ConfirmPayment(orderCode);
-            }
-
             return Ok(new
             {
                 message = "Thanh toán thành công",
@@ -55,8 +49,7 @@ namespace EcommerceTeaShop.API.Controllers.ClientController
             });
         }
 
-        // PayOS redirect khi cancel
-        [HttpGet("/cancel")]
+        [HttpGet("cancel")]
         public IActionResult Cancel()
         {
             return Ok(new
@@ -64,6 +57,8 @@ namespace EcommerceTeaShop.API.Controllers.ClientController
                 message = "Thanh toán đã bị huỷ"
             });
         }
+
+      
 
         [AllowAnonymous]
         [HttpPost("webhook")]

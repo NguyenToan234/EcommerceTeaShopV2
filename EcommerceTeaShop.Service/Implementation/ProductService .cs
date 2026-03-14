@@ -77,10 +77,12 @@ public class ProductService : IProductService
 
         try
         {
-            var product = await _productRepository.GetDbContext()
-                .Set<Product>()
+            var db = _productRepository.GetDbContext();
+
+            var product = await db.Set<Product>()
                 .Include(x => x.Category)
-                .FirstOrDefaultAsync(x => x.Id == id);
+                .Include(x => x.Variants)
+                .FirstOrDefaultAsync(x => x.Id == id && x.IsActive);
 
             if (product == null)
             {
@@ -92,14 +94,23 @@ public class ProductService : IProductService
 
             dto.IsSucess = true;
             dto.BusinessCode = BusinessCode.GET_DATA_SUCCESSFULLY;
-            dto.Data = new ReadProductDTO
+
+            dto.Data = new
             {
-                ProductId = product.Id,
-                Name = product.Name,
-                Description = product.Description,
-                //Price = product.Price,
-                //StockQuantity = product.StockQuantity,
-                CategoryName = product.Category.Name
+                productId = product.Id,
+                name = product.Name,
+                description = product.Description,
+                categoryName = product.Category.Name,
+
+                variants = product.Variants
+                    .Where(v => !v.IsDeleted)
+                    .Select(v => new
+                    {
+                        variantId = v.Id,
+                        gram = v.Gram,
+                        price = v.Price,
+                        stock = v.StockQuantity
+                    })
             };
         }
         catch (Exception ex)
@@ -111,7 +122,6 @@ public class ProductService : IProductService
 
         return dto;
     }
-
     public async Task<ResponseDTO> SearchProductsAsync(string keyword, int pageNumber, int pageSize)
     {
         ResponseDTO dto = new();

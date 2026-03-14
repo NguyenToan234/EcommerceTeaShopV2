@@ -12,7 +12,7 @@ namespace EcommerceTeaShop.Service.Contract
         Task<ResponseDTO> CheckoutAsync(Guid clientId, Guid addressId);
             Task<ResponseDTO> GetMyOrdersAsync(Guid clientId);
 
-        Task<ResponseDTO> GetOrderByIdAsync(Guid clientId, Guid orderId);
+        Task<ResponseDTO> GetOrderByCodeAsync(long orderCode);
 
         Task ConfirmPayment(long orderCode);
 

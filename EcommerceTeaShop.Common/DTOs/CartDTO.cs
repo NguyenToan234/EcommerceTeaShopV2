@@ -8,8 +8,7 @@ namespace EcommerceTeaShop.Common.DTOs
 {
     public class AddToCartDTO
     {
-        public Guid ProductId { get; set; }
-
+        public Guid ProductVariantId { get; set; }
         public int Quantity { get; set; }
     }
 
@@ -24,9 +23,11 @@ namespace EcommerceTeaShop.Common.DTOs
     {
         public Guid CartItemId { get; set; }
 
-        public Guid ProductId { get; set; }
+        public Guid ProductVariantId { get; set; }
 
         public string ProductName { get; set; }
+
+        public int Gram { get; set; }
 
         public decimal Price { get; set; }
 

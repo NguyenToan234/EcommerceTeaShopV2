@@ -48,13 +48,10 @@ public class OrderController : ControllerBase
         return StatusFromResult(result);
     }
 
-    [HttpGet("{orderId}")]
-    public async Task<IActionResult> GetOrder(Guid orderId)
+    [HttpGet("code/{orderCode}")]
+    public async Task<IActionResult> GetOrderByCode(long orderCode)
     {
-        var clientId = GetClientId();
-
-        var result = await _orderService.GetOrderByIdAsync(clientId, orderId);
-
+        var result = await _orderService.GetOrderByCodeAsync(orderCode);
         return StatusFromResult(result);
     }
 

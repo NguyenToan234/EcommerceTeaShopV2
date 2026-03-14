@@ -13,5 +13,6 @@ namespace EcommerceTeaShop.Repository.Models
         public virtual Client Client { get; set; }
 
         public virtual ICollection<CartItem> CartItems { get; set; }
+
     }
 }

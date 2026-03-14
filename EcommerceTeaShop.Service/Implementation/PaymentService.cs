@@ -21,8 +21,8 @@ public class PaymentService
     public async Task<string> CreatePaymentLink(long orderCode, int amount)
     {
         var description = $"TeaShop-{orderCode}";
-        var returnUrl = "https://localhost:7116/success";
-        var cancelUrl = "https://localhost:7116/cancel";
+        var returnUrl = "http://localhost:3000/payment/success";
+        var cancelUrl = "http://localhost:3000/payment/cancel";
 
         var signature = CreateSignature(orderCode, amount, description, returnUrl, cancelUrl);
 
