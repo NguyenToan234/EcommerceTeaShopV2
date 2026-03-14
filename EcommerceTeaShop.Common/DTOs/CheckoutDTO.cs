@@ -8,6 +8,6 @@ namespace EcommerceTeaShop.Common.DTOs
 {
     public class CheckoutDTO
     {
-        public Guid ClientId { get; set; }
+        public Guid AddressId { get; set; }
     }
 }

@@ -23,10 +23,17 @@ public class OrderController : ControllerBase
     }
 
     [HttpPost("checkout")]
-    public async Task<IActionResult> Checkout()
+    public async Task<IActionResult> Checkout([FromBody] CheckoutDTO dto)
     {
-        var clientId = GetClientId(); // từ JWT
-        var result = await _orderService.CheckoutAsync(clientId);
+        var claim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+        if (claim == null)
+        {
+            return Unauthorized("Token không chứa clientId");
+        }
+
+        var clientId = Guid.Parse(claim.Value);
+        var result = await _orderService.CheckoutAsync(clientId, dto.AddressId);
 
         return Ok(result);
     }

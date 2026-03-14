@@ -12,7 +12,7 @@ namespace EcommerceTeaShop.Repository.Models
 
         public Guid ClientId { get; set; }
 
-        public int Star { get; set; }
+        public int Star { get; set; }   
 
         public string Comment { get; set; }
 

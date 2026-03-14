@@ -5,6 +5,7 @@ using EcommerceTeaShop.Repository.Contract;
 using EcommerceTeaShop.Repository.Models;
 using EcommerceTeaShop.Service.Contract;
 using System.Security.Cryptography;
+using Google.Apis.Auth;
 
 public class AuthService : IAuthService
 {
@@ -231,15 +232,20 @@ TeaVault System
 
     public async Task<ResponseDTO> LoginWithGoogleAsync(GoogleLoginRequest request)
     {
-        var user = await _clientRepo.GetFirstByExpression(x => x.Email == request.Email);
+        var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken);
+
+        var email = payload.Email;
+        var name = payload.Name;
+
+        var user = await _clientRepo.GetFirstByExpression(x => x.Email == email);
 
         if (user == null)
         {
             user = new Client
             {
                 Id = Guid.NewGuid(),
-                Email = request.Email,
-                FullName = request.Name,
+                Email = email,
+                FullName = name,
                 Role = "User",
                 EmailVerified = true
             };
@@ -247,6 +253,17 @@ TeaVault System
             await _clientRepo.Insert(user);
             await _unitOfWork.SaveChangeAsync();
         }
+        var refreshToken = GenerateRefreshToken();
+
+        await _refreshRepo.Insert(new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            ClientId = user.Id,
+            Token = refreshToken,
+            ExpiryDate = DateTime.UtcNow.AddDays(7)
+        });
+
+        await _unitOfWork.SaveChangeAsync();
 
         var accessToken = _jwtHelper.GenerateToken(new JwtUser
         {
@@ -260,12 +277,13 @@ TeaVault System
             Data = new LoginResponse
             {
                 AccessToken = accessToken,
+                RefreshToken = refreshToken,
+
                 Email = user.Email,
                 Role = user.Role
             }
         };
     }
-
     public async Task<ResponseDTO> ForgotPasswordAsync(ForgotPasswordRequest request)
     {
         var user = await _clientRepo.GetFirstByExpression(x => x.Email == request.Email);

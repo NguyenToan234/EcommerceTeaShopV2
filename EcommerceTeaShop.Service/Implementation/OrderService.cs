@@ -32,7 +32,7 @@ public class OrderService : IOrderService
         _paymentService = paymentService;
     }
 
-    public async Task<ResponseDTO> CheckoutAsync(Guid clientId)
+    public async Task<ResponseDTO> CheckoutAsync(Guid clientId, Guid addressId)
     {
         ResponseDTO response = new();
 
@@ -52,29 +52,22 @@ public class OrderService : IOrderService
                 return response;
             }
 
+            // Lấy address user
+            var address = await db.Set<Addresses>()
+                .FirstOrDefaultAsync(x => x.Id == addressId && x.ClientId == clientId);
+
+            if (address == null)
+            {
+                response.IsSucess = false;
+                response.Message = "Không tìm thấy địa chỉ.";
+                return response;
+            }
+
             decimal totalPrice = 0;
 
             long orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-            // tạm set address fake để DB không null
-            var order = new Order
-            {
-                Id = Guid.NewGuid(),
-                ClientId = clientId,
-                OrderCode = orderCode,
-                OrderDate = DateTime.UtcNow,
-                Status = OrderStatus.Pending,
-
-                FullName = "Test User",
-                Phone = "0000000000",
-                AddressLine = "Temporary Address",
-                City = "HCM",
-                District = "District 1",
-                Ward = "Ward 1"
-            };
-
-            await _orderRepository.Insert(order);
-
+            // Tính tổng tiền trước
             foreach (var item in cart.CartItems)
             {
                 if (item.Product.StockQuantity < item.Quantity)
@@ -84,18 +77,7 @@ public class OrderService : IOrderService
                     return response;
                 }
 
-                var orderDetail = new OrderDetails
-                {
-                    Id = Guid.NewGuid(),
-                    OrderId = order.Id,
-                    ProductId = item.ProductId,
-                    Quantity = item.Quantity,
-                    Price = item.Product.Price
-                };
-
                 totalPrice += item.Product.Price * item.Quantity;
-
-                await _orderDetailsRepository.Insert(orderDetail);
             }
 
             if (totalPrice < 2000)
@@ -105,7 +87,39 @@ public class OrderService : IOrderService
                 return response;
             }
 
-            order.TotalPrice = totalPrice;
+            var order = new Order
+            {
+                Id = Guid.NewGuid(),
+                ClientId = clientId,
+                OrderCode = orderCode,
+                OrderDate = DateTime.UtcNow,
+                Status = OrderStatus.Pending,
+
+                FullName = address.FullName,
+                Phone = address.Phone,
+                AddressLine = address.AddressLine,
+                City = address.City,
+                District = address.District,
+                Ward = address.Ward,
+
+                TotalPrice = totalPrice
+            };
+
+            await _orderRepository.Insert(order);
+
+            foreach (var item in cart.CartItems)
+            {
+                var orderDetail = new OrderDetails
+                {
+                    Id = Guid.NewGuid(),
+                    OrderId = order.Id,
+                    ProductId = item.ProductId,
+                    Quantity = item.Quantity,
+                    Price = item.Product.Price
+                };
+
+                await _orderDetailsRepository.Insert(orderDetail);
+            }
 
             await _unitOfWork.SaveChangeAsync();
 
@@ -150,11 +164,21 @@ public class OrderService : IOrderService
             response.Data = orders.Select(o => new
             {
                 o.Id,
-                o.OrderCode,   // thêm dòng này
-
+                o.OrderCode,
                 o.TotalPrice,
                 Status = o.Status.ToString(),
                 o.OrderDate,
+
+                ShippingAddress = new
+                {
+                    o.FullName,
+                    o.Phone,
+                    o.AddressLine,
+                    o.Ward,
+                    o.District,
+                    o.City
+                },
+
                 Items = o.OrderDetails.Select(d => new
                 {
                     ProductName = d.Product.Name,
