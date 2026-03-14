@@ -1,13 +1,16 @@
+﻿using CloudinaryDotNet;
+using EcommerceTeaShop.Common.DTOs;
 using EcommerceTeaShop.Repository.Contract;
 using EcommerceTeaShop.Repository.DB;
 using EcommerceTeaShop.Repository.Implementation;
 using EcommerceTeaShop.Service.Contract;
-using Microsoft.EntityFrameworkCore;
+using EcommerceTeaShop.Service.Implementation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,7 +65,31 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IAddressService, AddressService>();
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+builder.Services.AddScoped<IAdminProductService, AdminProductService>();
 builder.Services.AddHttpClient<PaymentService>();
+
+
+builder.Services.Configure<CloudinarySettings>(
+    builder.Configuration.GetSection("CloudinarySettings")
+);
+var cloudinaryConfig = builder.Configuration
+    .GetSection("CloudinarySettings")
+    .Get<CloudinarySettings>();
+
+if (cloudinaryConfig == null)
+    throw new Exception("❌ CloudinarySettings is missing in appsettings.json.");
+Account account = new Account(
+    cloudinaryConfig.CloudName,
+    cloudinaryConfig.ApiKey,
+    cloudinaryConfig.ApiSecret
+);
+
+Cloudinary cloudinary = new Cloudinary(account);
+cloudinary.Api.Secure = true;
+
+// Register singleton
+builder.Services.AddSingleton(cloudinary);
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();

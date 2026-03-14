@@ -70,14 +70,14 @@ public class OrderService : IOrderService
             // Tính tổng tiền trước
             foreach (var item in cart.CartItems)
             {
-                if (item.Product.StockQuantity < item.Quantity)
+                //if (item.Product.StockQuantity < item.Quantity)
                 {
                     response.IsSucess = false;
                     response.Message = $"Sản phẩm {item.Product.Name} không đủ hàng.";
                     return response;
                 }
 
-                totalPrice += item.Product.Price * item.Quantity;
+                //totalPrice += item.Product.Price * item.Quantity;
             }
 
             if (totalPrice < 2000)
@@ -115,7 +115,7 @@ public class OrderService : IOrderService
                     OrderId = order.Id,
                     ProductId = item.ProductId,
                     Quantity = item.Quantity,
-                    Price = item.Product.Price
+                    //Price = item.Product.Price
                 };
 
                 await _orderDetailsRepository.Insert(orderDetail);
@@ -274,7 +274,7 @@ public class OrderService : IOrderService
             var product = await db.Set<Product>()
                 .FirstOrDefaultAsync(x => x.Id == item.ProductId);
 
-            product.StockQuantity -= item.Quantity;
+            //product.StockQuantity -= item.Quantity;
 
             Console.WriteLine($"Trừ kho sản phẩm {product.Name} -{item.Quantity}");
         }

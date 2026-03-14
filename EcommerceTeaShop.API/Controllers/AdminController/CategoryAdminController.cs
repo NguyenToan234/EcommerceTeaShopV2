@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/admin/category")]
-[Authorize(Roles = "ADMIN")]
+[Authorize(Roles = "Admin")]
 public class CategoryAdminController : ControllerBase
 {
     private readonly ICategoryService _categoryService;
@@ -31,14 +31,14 @@ public class CategoryAdminController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreateCategoryDTO dto)
+    public async Task<IActionResult> Create([FromForm] CreateCategoryDTO dto)
     {
         var result = await _categoryService.CreateCategoryAsync(dto);
         return StatusFromResult(result);
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, UpdateCategoryDTO dto)
+    public async Task<IActionResult> Update(Guid id, [FromForm] UpdateCategoryDTO dto)
     {
         var result = await _categoryService.UpdateCategoryAsync(id, dto);
         return StatusFromResult(result);

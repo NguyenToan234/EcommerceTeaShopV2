@@ -6,17 +6,16 @@ using System.Threading.Tasks;
 
 namespace EcommerceTeaShop.Repository.Models
 {
-    public class Rating : BaseModel
+    public class ProductVariant : BaseModel
     {
         public Guid ProductId { get; set; }
 
-        public Guid ClientId { get; set; }
+        public int Gram { get; set; }
 
-        public int Star { get; set; }
+        public decimal Price { get; set; }
 
-        public string Comment { get; set; }
-        public bool IsApproved { get; set; } = true;
+        public int StockQuantity { get; set; }
+
         public virtual Product Product { get; set; }
-        public virtual Client Client { get; set; }
     }
 }
