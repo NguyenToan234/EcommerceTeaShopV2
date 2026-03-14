@@ -19,8 +19,7 @@ namespace EcommerceTeaShop.Common.DTOs
 
     public class GoogleLoginRequest
     {
-        public string Email { get; set; }
+        public string IdToken { get; set; }
 
-        public string Name { get; set; }
     }
 }
