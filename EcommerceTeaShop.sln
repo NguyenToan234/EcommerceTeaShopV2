@@ -3,13 +3,18 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35303.130
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EcommerceTeaShop.Repository", "EcommerceTeaShop.Repository\EcommerceTeaShop.Repository.csproj", "{6E20E292-47B9-45C5-B527-42B5D404E0DD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EcommerceTeaShop.Repository", "EcommerceTeaShop.Repository\EcommerceTeaShop.Repository.csproj", "{6E20E292-47B9-45C5-B527-42B5D404E0DD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EcommerceTeaShop.API", "EcommerceTeaShop.API\EcommerceTeaShop.API.csproj", "{A0937A50-7899-4562-9F23-114A40E88C59}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EcommerceTeaShop.API", "EcommerceTeaShop.API\EcommerceTeaShop.API.csproj", "{A0937A50-7899-4562-9F23-114A40E88C59}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EcommerceTeaShop.Common", "EcommerceTeaShop.Common\EcommerceTeaShop.Common.csproj", "{83A16139-6447-422D-9D14-550269363822}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EcommerceTeaShop.Common", "EcommerceTeaShop.Common\EcommerceTeaShop.Common.csproj", "{83A16139-6447-422D-9D14-550269363822}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EcommerceTeaShop.Service", "EcommerceTeaShop.Service\EcommerceTeaShop.Service.csproj", "{9E815494-F393-4819-9CA8-381426C7723E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EcommerceTeaShop.Service", "EcommerceTeaShop.Service\EcommerceTeaShop.Service.csproj", "{9E815494-F393-4819-9CA8-381426C7723E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{02E0B6CF-A61D-4952-BCB5-C293C0001FE5}"
+	ProjectSection(SolutionItems) = preProject
+		Dockerfile.txt = Dockerfile.txt
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
