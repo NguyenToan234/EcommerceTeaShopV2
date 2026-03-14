@@ -41,8 +41,9 @@ public class OrderService : IOrderService
             var db = _orderRepository.GetDbContext();
 
             var cart = await db.Set<Cart>()
-                .Include(x => x.CartItems)
-                .ThenInclude(ci => ci.Product)
+               .Include(x => x.CartItems)
+.ThenInclude(ci => ci.ProductVariant)
+.ThenInclude(v => v.Product)
                 .FirstOrDefaultAsync(x => x.ClientId == clientId);
 
             if (cart == null || !cart.CartItems.Any())
@@ -70,14 +71,14 @@ public class OrderService : IOrderService
             // Tính tổng tiền trước
             foreach (var item in cart.CartItems)
             {
-                //if (item.Product.StockQuantity < item.Quantity)
+                if (item.ProductVariant.StockQuantity < item.Quantity)
                 {
                     response.IsSucess = false;
-                    response.Message = $"Sản phẩm {item.Product.Name} không đủ hàng.";
+                    response.Message = $"Sản phẩm {item.ProductVariant.Product.Name} không đủ hàng.";
                     return response;
                 }
 
-                //totalPrice += item.Product.Price * item.Quantity;
+                totalPrice += item.ProductVariant.Price * item.Quantity;
             }
 
             if (totalPrice < 2000)
@@ -113,9 +114,9 @@ public class OrderService : IOrderService
                 {
                     Id = Guid.NewGuid(),
                     OrderId = order.Id,
-                    ProductId = item.ProductId,
+                    ProductVariantId = item.ProductVariantId,
                     Quantity = item.Quantity,
-                    //Price = item.Product.Price
+                    Price = item.ProductVariant.Price
                 };
 
                 await _orderDetailsRepository.Insert(orderDetail);
@@ -153,8 +154,9 @@ public class OrderService : IOrderService
             var db = _orderRepository.GetDbContext();
 
             var orders = await db.Set<Order>()
-                .Include(x => x.OrderDetails)
-                .ThenInclude(od => od.Product)
+               .Include(x => x.OrderDetails)
+.ThenInclude(od => od.ProductVariant)
+.ThenInclude(v => v.Product)
                 .Where(x => x.ClientId == clientId)
                 .OrderByDescending(x => x.OrderDate)
                 .ToListAsync();
@@ -181,7 +183,8 @@ public class OrderService : IOrderService
 
                 Items = o.OrderDetails.Select(d => new
                 {
-                    ProductName = d.Product.Name,
+                    ProductName = d.ProductVariant.Product.Name,
+                    Gram = d.ProductVariant.Gram,
                     d.Price,
                     d.Quantity
                 })
@@ -197,7 +200,7 @@ public class OrderService : IOrderService
         return response;
     }
 
-    public async Task<ResponseDTO> GetOrderByIdAsync(Guid clientId, Guid orderId)
+    public async Task<ResponseDTO> GetOrderByCodeAsync(long orderCode)
     {
         ResponseDTO response = new();
 
@@ -207,8 +210,9 @@ public class OrderService : IOrderService
 
             var order = await db.Set<Order>()
                 .Include(x => x.OrderDetails)
-                .ThenInclude(od => od.Product)
-                .FirstOrDefaultAsync(x => x.Id == orderId && x.ClientId == clientId);
+                .ThenInclude(od => od.ProductVariant)
+                .ThenInclude(v => v.Product)
+                .FirstOrDefaultAsync(x => x.OrderCode == orderCode);
 
             if (order == null)
             {
@@ -220,15 +224,19 @@ public class OrderService : IOrderService
 
             response.IsSucess = true;
             response.BusinessCode = BusinessCode.GET_DATA_SUCCESSFULLY;
+
             response.Data = new
             {
                 order.Id,
+                order.OrderCode,
                 order.TotalPrice,
-                order.Status,
+                Status = order.Status.ToString(),
                 order.OrderDate,
+
                 Items = order.OrderDetails.Select(x => new
                 {
-                    ProductName = x.Product.Name,
+                    ProductName = x.ProductVariant.Product.Name,
+                    Gram = x.ProductVariant.Gram,
                     x.Price,
                     x.Quantity
                 })
@@ -243,7 +251,6 @@ public class OrderService : IOrderService
 
         return response;
     }
-
     public async Task ConfirmPayment(long orderCode)
     {
         Console.WriteLine($"[Webhook] Nhận thanh toán cho đơn hàng: {orderCode}");
@@ -271,12 +278,10 @@ public class OrderService : IOrderService
 
         foreach (var item in order.OrderDetails)
         {
-            var product = await db.Set<Product>()
-                .FirstOrDefaultAsync(x => x.Id == item.ProductId);
+            var variant = await db.Set<ProductVariant>()
+                .FirstOrDefaultAsync(x => x.Id == item.ProductVariantId);
 
-            //product.StockQuantity -= item.Quantity;
-
-            Console.WriteLine($"Trừ kho sản phẩm {product.Name} -{item.Quantity}");
+            variant.StockQuantity -= item.Quantity;
         }
 
         var cart = await db.Set<Cart>()

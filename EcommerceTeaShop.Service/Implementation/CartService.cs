@@ -40,18 +40,19 @@ public class CartService : ICartService
 
             var db = _cartRepository.GetDbContext();
 
-            var product = await db.Set<Product>()
-                .FirstOrDefaultAsync(x => x.Id == dto.ProductId);
+            var variant = await db.Set<ProductVariant>()
+     .Include(x => x.Product)
+     .FirstOrDefaultAsync(x => x.Id == dto.ProductVariantId);
 
-            if (product == null)
+            if (variant == null)
             {
                 response.IsSucess = false;
                 response.BusinessCode = BusinessCode.DATA_NOT_FOUND;
-                response.Message = "Không tìm thấy sản phẩm.";
+                response.Message = "Không tìm thấy biến thể sản phẩm.";
                 return response;
             }
 
-            if (!product.IsActive)
+            if (!variant.Product.IsActive)
             {
                 response.IsSucess = false;
                 response.BusinessCode = BusinessCode.INVALID_ACTION;
@@ -76,7 +77,7 @@ public class CartService : ICartService
             }
 
             var cartItem = cart.CartItems
-                .FirstOrDefault(x => x.ProductId == dto.ProductId);
+     .FirstOrDefault(x => x.ProductVariantId == dto.ProductVariantId);
 
             if (cartItem != null)
             {
@@ -88,7 +89,7 @@ public class CartService : ICartService
                 {
                     Id = Guid.NewGuid(),
                     CartId = cart.Id,
-                    ProductId = dto.ProductId,
+                    ProductVariantId = dto.ProductVariantId,
                     Quantity = dto.Quantity
                 };
 
@@ -121,7 +122,8 @@ public class CartService : ICartService
 
             var cart = await db.Set<Cart>()
                 .Include(x => x.CartItems)
-                .ThenInclude(ci => ci.Product)
+                .ThenInclude(ci => ci.ProductVariant)
+                .ThenInclude(v => v.Product)
                 .FirstOrDefaultAsync(x => x.ClientId == clientId);
 
             if (cart == null || !cart.CartItems.Any())
@@ -135,9 +137,10 @@ public class CartService : ICartService
             var items = cart.CartItems.Select(x => new ReadCartItemDTO
             {
                 CartItemId = x.Id,
-                ProductId = x.ProductId,
-                ProductName = x.Product.Name,
-                //Price = x.Product.Price,
+                ProductVariantId = x.ProductVariantId,
+                ProductName = x.ProductVariant.Product.Name,
+                Gram = x.ProductVariant.Gram,
+                Price = x.ProductVariant.Price,
                 Quantity = x.Quantity
             }).ToList();
 
@@ -160,7 +163,6 @@ public class CartService : ICartService
 
         return response;
     }
-
     public async Task<ResponseDTO> UpdateQuantityAsync(Guid clientId, UpdateCartItemDTO dto)
     {
         ResponseDTO response = new();
