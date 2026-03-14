@@ -13,9 +13,7 @@ namespace EcommerceTeaShop.Repository.Models
 
         public string Description { get; set; }
 
-        public decimal Price { get; set; }
 
-        public int StockQuantity { get; set; }
 
         public Guid CategoryId { get; set; }
 
@@ -26,5 +24,6 @@ namespace EcommerceTeaShop.Repository.Models
         public virtual ICollection<Image> Images { get; set; }
 
         public virtual ICollection<Rating> Ratings { get; set; }
+        public virtual ICollection<ProductVariant> Variants { get; set; }
     }
 }

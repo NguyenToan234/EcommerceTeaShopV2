@@ -10,13 +10,16 @@ public class CategoryService : ICategoryService
 {
     private readonly IGenericRepository<Category> _categoryRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICloudinaryService _cloudinaryService;
 
     public CategoryService(
         IGenericRepository<Category> categoryRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ICloudinaryService cloudinaryService)
     {
         _categoryRepository = categoryRepository;
         _unitOfWork = unitOfWork;
+        _cloudinaryService = cloudinaryService;
     }
 
     public async Task<ResponseDTO> GetAllCategoriesAsync(int pageNumber, int pageSize)
@@ -27,7 +30,7 @@ public class CategoryService : ICategoryService
         {
             var db = _categoryRepository.GetDbContext();
 
-            var query = db.Set<Category>().AsQueryable();
+            var query = db.Set<Category>().Where(x => !x.IsDeleted);
 
             var totalItems = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
@@ -42,7 +45,8 @@ public class CategoryService : ICategoryService
             {
                 CategoryId = c.Id,
                 Name = c.Name,
-                Description = c.Description
+                Description = c.Description,
+                ImageUrl = c.ImageUrl
 
             }).ToList();
 
@@ -93,7 +97,8 @@ public class CategoryService : ICategoryService
             dto.Data = new ReadCategoryDTO
             {
                 CategoryId = category.Id,
-                Name = category.Name
+                Name = category.Name,
+                ImageUrl = category.ImageUrl
             };
         }
         catch (Exception ex)
@@ -134,11 +139,27 @@ public class CategoryService : ICategoryService
                 dto.Message = "Danh mục đã tồn tại.";
                 return dto;
             }
+            if (request.Image == null)
+            {
+                dto.IsSucess = false;
+                dto.BusinessCode = BusinessCode.VALIDATION_FAILED;
+                dto.Message = "Image không được để trống.";
+                return dto;
+            }
+            string imageUrl = "";
+
+            if (request.Image != null)
+            {
+                imageUrl = await _cloudinaryService.UploadImageAsync(request.Image, "tea-categories");
+            }
 
             var category = new Category
             {
                 Id = Guid.NewGuid(),
-                Name = request.Name.Trim()
+                Name = request.Name.Trim(),
+                Description = "",
+                ImageUrl = imageUrl,
+                CreatedAt = DateTime.UtcNow
             };
 
             await _categoryRepository.Insert(category);
@@ -188,7 +209,15 @@ public class CategoryService : ICategoryService
                 }
 
                 category.Name = request.Name.Trim();
+
             }
+            if (request.Image != null)
+            {
+                var imageUrl = await _cloudinaryService.UploadImageAsync(request.Image, "tea-categories");
+                category.ImageUrl = imageUrl;
+            }
+
+            category.UpdatedAt = DateTime.UtcNow;
 
             await _categoryRepository.Update(category);
             await _unitOfWork.SaveChangeAsync();
@@ -226,7 +255,10 @@ public class CategoryService : ICategoryService
                 return dto;
             }
 
-            await _categoryRepository.Delete(category);
+            category.IsDeleted = true;
+            category.UpdatedAt = DateTime.UtcNow;
+
+            await _categoryRepository.Update(category);
             await _unitOfWork.SaveChangeAsync();
 
             dto.IsSucess = true;
@@ -287,7 +319,8 @@ public class CategoryService : ICategoryService
             {
                 CategoryId = c.Id,
                 Name = c.Name,
-                Description = c.Description
+                Description = c.Description,
+                ImageUrl = c.ImageUrl
             }).ToList();
 
             dto.IsSucess = true;

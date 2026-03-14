@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,11 +10,13 @@ namespace EcommerceTeaShop.Common.DTOs
     public class CreateCategoryDTO
     {
         public string Name { get; set; } = string.Empty;
+        public IFormFile Image { get; set; }
     }
 
     public class UpdateCategoryDTO
     {
         public string? Name { get; set; }
+        public IFormFile? Image { get; set; }
     }
 
     public class ReadCategoryDTO
@@ -21,6 +24,9 @@ namespace EcommerceTeaShop.Common.DTOs
         public Guid CategoryId { get; set; }
 
         public string Name { get; set; } = string.Empty;
+
+        public string ImageUrl { get; set; }
+
         public string Description { get; set; } = string.Empty;
 
     }

@@ -17,6 +17,7 @@ namespace EcommerceTeaShop.Repository.DB
 
 
         public DbSet<Product> Products { get; set; }
+        public DbSet<ProductVariant> ProductVariants { get; set; }
         public DbSet<Client> Clients { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderDetails> OrderDetails { get; set; }
@@ -49,6 +50,16 @@ namespace EcommerceTeaShop.Repository.DB
         //        .HasMany(c => c.Orders)
         //        .WithOne(o => o.Client)
         //        .HasForeignKey(o => o.ClientId);
+
+
         //}
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<ProductVariant>()
+                .ToTable("ProductVariant");
+        }
     }
 }

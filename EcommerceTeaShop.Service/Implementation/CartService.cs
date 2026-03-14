@@ -137,7 +137,7 @@ public class CartService : ICartService
                 CartItemId = x.Id,
                 ProductId = x.ProductId,
                 ProductName = x.Product.Name,
-                Price = x.Product.Price,
+                //Price = x.Product.Price,
                 Quantity = x.Quantity
             }).ToList();
 

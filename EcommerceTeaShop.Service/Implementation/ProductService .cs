@@ -44,8 +44,8 @@ public class ProductService : IProductService
                 ProductId = p.Id,
                 Name = p.Name,
                 Description = p.Description,
-                Price = p.Price,
-                StockQuantity = p.StockQuantity,
+                //Price = p.Price,
+                //StockQuantity = p.StockQuantity,
                 CategoryName = p.Category.Name
             });
 
@@ -97,8 +97,8 @@ public class ProductService : IProductService
                 ProductId = product.Id,
                 Name = product.Name,
                 Description = product.Description,
-                Price = product.Price,
-                StockQuantity = product.StockQuantity,
+                //Price = product.Price,
+                //StockQuantity = product.StockQuantity,
                 CategoryName = product.Category.Name
             };
         }
@@ -145,8 +145,8 @@ public class ProductService : IProductService
                 ProductId = p.Id,
                 Name = p.Name,
                 Description = p.Description,
-                Price = p.Price,
-                StockQuantity = p.StockQuantity,
+                //Price = p.Price,
+                //StockQuantity = p.StockQuantity,
                 CategoryName = p.Category.Name
             });
 
@@ -189,8 +189,8 @@ public class ProductService : IProductService
                 ProductId = p.Id,
                 Name = p.Name,
                 Description = p.Description,
-                Price = p.Price,
-                StockQuantity = p.StockQuantity,
+                //Price = p.Price,
+                //StockQuantity = p.StockQuantity,
                 CategoryName = p.Category.Name
             });
 
@@ -219,8 +219,8 @@ public class ProductService : IProductService
                 Id = Guid.NewGuid(),
                 Name = dtoRequest.Name,
                 Description = dtoRequest.Description,
-                Price = dtoRequest.Price,
-                StockQuantity = dtoRequest.StockQuantity,
+                //Price = dtoRequest.Price,
+                //StockQuantity = dtoRequest.StockQuantity,
                 CategoryId = dtoRequest.CategoryId,
                 IsActive = true
             };
@@ -308,31 +308,31 @@ public class ProductService : IProductService
             if (dtoRequest.Description != null)
                 product.Description = dtoRequest.Description;
 
-            if (dtoRequest.Price.HasValue)
-            {
-                if (dtoRequest.Price <= 0)
-                {
-                    dto.IsSucess = false;
-                    dto.BusinessCode = BusinessCode.VALIDATION_FAILED;
-                    dto.Message = "Giá sản phẩm phải lớn hơn 0.";
-                    return dto;
-                }
+            //if (dtoRequest.Price.HasValue)
+            //{
+            //    if (dtoRequest.Price <= 0)
+            //    {
+            //        dto.IsSucess = false;
+            //        dto.BusinessCode = BusinessCode.VALIDATION_FAILED;
+            //        dto.Message = "Giá sản phẩm phải lớn hơn 0.";
+            //        return dto;
+            //    }
 
-                product.Price = dtoRequest.Price.Value;
-            }
+            //    //product.Price = dtoRequest.Price.Value;
+            //}
 
-            if (dtoRequest.StockQuantity.HasValue)
-            {
-                if (dtoRequest.StockQuantity < 0)
-                {
-                    dto.IsSucess = false;
-                    dto.BusinessCode = BusinessCode.VALIDATION_FAILED;
-                    dto.Message = "Số lượng tồn kho không hợp lệ.";
-                    return dto;
-                }
+            //if (dtoRequest.StockQuantity.HasValue)
+            //{
+            //    if (dtoRequest.StockQuantity < 0)
+            //    {
+            //        dto.IsSucess = false;
+            //        dto.BusinessCode = BusinessCode.VALIDATION_FAILED;
+            //        dto.Message = "Số lượng tồn kho không hợp lệ.";
+            //        return dto;
+            //    }
 
-                product.StockQuantity = dtoRequest.StockQuantity.Value;
-            }
+            //    //product.StockQuantity = dtoRequest.StockQuantity.Value;
+            //}
 
             if (dtoRequest.IsActive.HasValue)
                 product.IsActive = dtoRequest.IsActive.Value;
