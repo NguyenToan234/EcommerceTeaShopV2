@@ -9,6 +9,8 @@ namespace EcommerceTeaShop.API.Controllers.ClientController
 {
     [Route("api/payment")]
     [ApiController]
+    [Authorize(Roles = "User")]
+
     public class PaymentController : ControllerBase
     {
         private readonly PaymentService _paymentService;

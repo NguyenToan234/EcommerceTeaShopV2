@@ -1,10 +1,13 @@
 ﻿using EcommerceTeaShop.Common.DTOs;
 using EcommerceTeaShop.Common.DTOs.BusinessCode;
 using EcommerceTeaShop.Service.Contract;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [Route("api/category")]
 [ApiController]
+[Authorize(Roles = "User")]
+
 public class CategoryController : ControllerBase
 {
     private readonly ICategoryService _categoryService;

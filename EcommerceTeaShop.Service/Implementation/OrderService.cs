@@ -5,7 +5,6 @@ using EcommerceTeaShop.Repository.Models;
 using EcommerceTeaShop.Repository.Models.EnumModels;
 using EcommerceTeaShop.Service.Contract;
 using Microsoft.EntityFrameworkCore;
-using System.Net;
 
 public class OrderService : IOrderService
 {
@@ -17,12 +16,12 @@ public class OrderService : IOrderService
     private readonly IUnitOfWork _unitOfWork;
 
     public OrderService(
-      IGenericRepository<Order> orderRepository,
-      IGenericRepository<OrderDetails> orderDetailsRepository,
-      IGenericRepository<Cart> cartRepository,
-      IGenericRepository<Product> productRepository,
-      IUnitOfWork unitOfWork,
-      PaymentService paymentService)
+        IGenericRepository<Order> orderRepository,
+        IGenericRepository<OrderDetails> orderDetailsRepository,
+        IGenericRepository<Cart> cartRepository,
+        IGenericRepository<Product> productRepository,
+        IUnitOfWork unitOfWork,
+        PaymentService paymentService)
     {
         _orderRepository = orderRepository;
         _orderDetailsRepository = orderDetailsRepository;
@@ -41,9 +40,9 @@ public class OrderService : IOrderService
             var db = _orderRepository.GetDbContext();
 
             var cart = await db.Set<Cart>()
-               .Include(x => x.CartItems)
-.ThenInclude(ci => ci.ProductVariant)
-.ThenInclude(v => v.Product)
+                .Include(x => x.CartItems)
+                    .ThenInclude(ci => ci.ProductVariant)
+                    .ThenInclude(v => v.Product)
                 .FirstOrDefaultAsync(x => x.ClientId == clientId);
 
             if (cart == null || !cart.CartItems.Any())
@@ -53,7 +52,6 @@ public class OrderService : IOrderService
                 return response;
             }
 
-            // Lấy address user
             var address = await db.Set<Addresses>()
                 .FirstOrDefaultAsync(x => x.Id == addressId && x.ClientId == clientId);
 
@@ -64,11 +62,7 @@ public class OrderService : IOrderService
                 return response;
             }
 
-            decimal totalPrice = 0;
-
-            long orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
-            // Tính tổng tiền trước
+            // check stock
             foreach (var item in cart.CartItems)
             {
                 if (item.ProductVariant.StockQuantity < item.Quantity)
@@ -77,14 +71,23 @@ public class OrderService : IOrderService
                     response.Message = $"Sản phẩm {item.ProductVariant.Product.Name} không đủ hàng.";
                     return response;
                 }
-
-                totalPrice += item.ProductVariant.Price * item.Quantity;
             }
+
+            long orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+            // dùng giá đã tính trong cart (đã có coupon)
+            var totalPrice = cart.FinalAmount;
 
             if (totalPrice < 2000)
             {
                 response.IsSucess = false;
                 response.Message = "Số tiền phải >= 2000.";
+                return response;
+            }
+            if (cart.FinalAmount <= 0)
+            {
+                response.IsSucess = false;
+                response.Message = "Cart không hợp lệ.";
                 return response;
             }
 
@@ -145,6 +148,7 @@ public class OrderService : IOrderService
 
         return response;
     }
+
     public async Task<ResponseDTO> GetMyOrdersAsync(Guid clientId)
     {
         ResponseDTO response = new();
@@ -154,15 +158,16 @@ public class OrderService : IOrderService
             var db = _orderRepository.GetDbContext();
 
             var orders = await db.Set<Order>()
-               .Include(x => x.OrderDetails)
-.ThenInclude(od => od.ProductVariant)
-.ThenInclude(v => v.Product)
+                .Include(x => x.OrderDetails)
+                    .ThenInclude(od => od.ProductVariant)
+                    .ThenInclude(v => v.Product)
                 .Where(x => x.ClientId == clientId)
                 .OrderByDescending(x => x.OrderDate)
                 .ToListAsync();
 
             response.IsSucess = true;
             response.BusinessCode = BusinessCode.GET_DATA_SUCCESSFULLY;
+
             response.Data = orders.Select(o => new
             {
                 o.Id,
@@ -210,8 +215,8 @@ public class OrderService : IOrderService
 
             var order = await db.Set<Order>()
                 .Include(x => x.OrderDetails)
-                .ThenInclude(od => od.ProductVariant)
-                .ThenInclude(v => v.Product)
+                    .ThenInclude(od => od.ProductVariant)
+                    .ThenInclude(v => v.Product)
                 .FirstOrDefaultAsync(x => x.OrderCode == orderCode);
 
             if (order == null)
@@ -251,51 +256,72 @@ public class OrderService : IOrderService
 
         return response;
     }
+
     public async Task ConfirmPayment(long orderCode)
     {
         Console.WriteLine($"[Webhook] Nhận thanh toán cho đơn hàng: {orderCode}");
 
         var db = _orderRepository.GetDbContext();
 
-        var order = await db.Set<Order>()
-            .Include(x => x.OrderDetails)
-            .FirstOrDefaultAsync(x => x.OrderCode == orderCode);
+        await using var transaction = await db.Database.BeginTransactionAsync();
 
-        if (order == null)
+        try
         {
-            Console.WriteLine("Không tìm thấy đơn hàng");
-            throw new Exception("Không tìm thấy đơn hàng");
-        }
+            var order = await db.Set<Order>()
+                .Include(x => x.OrderDetails)
+                .FirstOrDefaultAsync(x => x.OrderCode == orderCode);
 
-        if (order.Status == OrderStatus.Paid)
+            if (order == null)
+            {
+                throw new Exception("Không tìm thấy đơn hàng");
+            }
+
+            // 🟢 FIX 1: chống webhook gọi 2 lần
+            if (order.Status == OrderStatus.Paid)
+            {
+                Console.WriteLine("Đơn hàng đã thanh toán trước đó.");
+                return;
+            }
+
+            // 🟢 Lock order
+            order.Status = OrderStatus.Paid;
+
+            foreach (var item in order.OrderDetails)
+            {
+                var variant = await db.Set<ProductVariant>()
+                    .FirstOrDefaultAsync(x => x.Id == item.ProductVariantId);
+
+                if (variant == null)
+                    throw new Exception("Product variant không tồn tại");
+
+                // 🟢 FIX 2: check stock trước khi trừ
+                if (variant.StockQuantity < item.Quantity)
+                    throw new Exception("Stock không đủ khi confirm payment");
+
+                variant.StockQuantity -= item.Quantity;
+            }
+
+            // Xóa cart
+            var cart = await db.Set<Cart>()
+                .Include(x => x.CartItems)
+                .FirstOrDefaultAsync(x => x.ClientId == order.ClientId);
+
+            if (cart != null)
+            {
+                db.Set<CartItem>().RemoveRange(cart.CartItems);
+            }
+
+            await _unitOfWork.SaveChangeAsync();
+
+            await transaction.CommitAsync();
+
+            Console.WriteLine("Hoàn tất xử lý webhook thanh toán");
+        }
+        catch (Exception ex)
         {
-            Console.WriteLine("Đơn hàng đã được thanh toán trước đó");
-            return;
+            await transaction.RollbackAsync();
+            Console.WriteLine("Payment confirm failed: " + ex.Message);
+            throw;
         }
-
-        order.Status = OrderStatus.Paid;
-        Console.WriteLine("Cập nhật trạng thái đơn hàng thành Paid");
-
-        foreach (var item in order.OrderDetails)
-        {
-            var variant = await db.Set<ProductVariant>()
-                .FirstOrDefaultAsync(x => x.Id == item.ProductVariantId);
-
-            variant.StockQuantity -= item.Quantity;
-        }
-
-        var cart = await db.Set<Cart>()
-            .Include(x => x.CartItems)
-            .FirstOrDefaultAsync(x => x.ClientId == order.ClientId);
-
-        if (cart != null)
-        {
-            db.Set<CartItem>().RemoveRange(cart.CartItems);
-            Console.WriteLine("Đã xoá giỏ hàng sau khi thanh toán");
-        }
-
-        await _unitOfWork.SaveChangeAsync();
-
-        Console.WriteLine("Hoàn tất xử lý webhook thanh toán");
     }
 }

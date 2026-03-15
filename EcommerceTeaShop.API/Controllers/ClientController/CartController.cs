@@ -20,12 +20,13 @@ public class CartController : ControllerBase
 
     private Guid GetClientId()
     {
-        var claim = User.Claims.FirstOrDefault(c =>
-            c.Type == JwtRegisteredClaimNames.Sub ||
-            c.Type == ClaimTypes.NameIdentifier ||
-            c.Type.EndsWith("/nameidentifier"));
+        var claim = User.FindFirst(ClaimTypes.NameIdentifier)
+            ?? User.FindFirst(JwtRegisteredClaimNames.Sub);
 
-        return Guid.Parse(claim.Value);
+        if (claim == null || !Guid.TryParse(claim.Value, out Guid clientId))
+            throw new UnauthorizedAccessException("Token không hợp lệ.");
+
+        return clientId;
     }
 
     [HttpPost("add")]
@@ -67,7 +68,25 @@ public class CartController : ControllerBase
 
         return StatusFromResult(result);
     }
+    [HttpPost("apply-coupon")]
+    public async Task<IActionResult> ApplyCoupon(ApplyCouponDTO dto)
+    {
+        var clientId = GetClientId();
 
+        var result = await _cartService.ApplyCouponAsync(clientId, dto.Code);
+
+        return StatusFromResult(result);
+    }
+
+    [HttpDelete("remove-coupon")]
+    public async Task<IActionResult> RemoveCoupon()
+    {
+        var clientId = GetClientId();
+
+        var result = await _cartService.RemoveCouponAsync(clientId);
+
+        return StatusFromResult(result);
+    }
     private IActionResult StatusFromResult(ResponseDTO result)
     {
         return result.BusinessCode switch

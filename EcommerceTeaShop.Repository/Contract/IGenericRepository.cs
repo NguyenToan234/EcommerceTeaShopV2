@@ -46,6 +46,11 @@ namespace EcommerceTeaShop.Repository.Contract
 
         IQueryable<T> AsQueryable();
 
+        Task<List<T>> GetListByExpression(
+        Expression<Func<T, bool>> filter,
+        params Expression<Func<T, object>>[]? includeProperties
+    );
+
     }
 
 }

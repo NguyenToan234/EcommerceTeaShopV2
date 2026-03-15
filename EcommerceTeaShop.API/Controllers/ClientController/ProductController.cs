@@ -1,10 +1,13 @@
 ﻿using EcommerceTeaShop.Common.DTOs;
 using EcommerceTeaShop.Common.DTOs.BusinessCode;
 using EcommerceTeaShop.Service.Contract;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [Route("api/product")]
 [ApiController]
+[Authorize(Roles = "User")]
+
 public class ProductController : ControllerBase
 {
     private readonly IProductService _productService;
