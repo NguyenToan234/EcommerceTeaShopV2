@@ -6,6 +6,8 @@
 
         public Guid ProductVariantId { get; set; }
 
+        public Guid? AddonId { get; set; }   // thêm
+
         public int Quantity { get; set; }
 
         public decimal Price { get; set; }
@@ -13,6 +15,8 @@
         public virtual Cart Cart { get; set; }
 
         public virtual ProductVariant ProductVariant { get; set; }
+
+        public virtual Addon Addon { get; set; }
 
     }
 }

@@ -12,6 +12,8 @@ namespace EcommerceTeaShop.Repository.Models
 
         public Guid ProductVariantId { get; set; }
 
+        public Guid? AddonId { get; set; }   // thêm
+
         public decimal Price { get; set; }
 
         public int Quantity { get; set; }
@@ -19,5 +21,7 @@ namespace EcommerceTeaShop.Repository.Models
         public virtual Order Order { get; set; }
 
         public virtual ProductVariant ProductVariant { get; set; }
+
+        public virtual Addon Addon { get; set; }  // thêm}
     }
 }
