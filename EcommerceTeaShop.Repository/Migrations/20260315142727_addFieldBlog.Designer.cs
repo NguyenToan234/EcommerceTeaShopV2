@@ -4,6 +4,7 @@ using EcommerceTeaShop.Repository.DB;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EcommerceTeaShop.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260315142727_addFieldBlog")]
+    partial class addFieldBlog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,36 +24,6 @@ namespace EcommerceTeaShop.Repository.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("EcommerceTeaShop.Repository.Models.Addon", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Addon");
-                });
 
             modelBuilder.Entity("EcommerceTeaShop.Repository.Models.Addresses", b =>
                 {
@@ -151,23 +124,11 @@ namespace EcommerceTeaShop.Repository.Migrations
                     b.Property<Guid>("ClientId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("CouponId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<decimal>("DiscountAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("FinalAmount")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -176,8 +137,6 @@ namespace EcommerceTeaShop.Repository.Migrations
 
                     b.HasIndex("ClientId");
 
-                    b.HasIndex("CouponId");
-
                     b.ToTable("Carts");
                 });
 
@@ -185,9 +144,6 @@ namespace EcommerceTeaShop.Repository.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("AddonId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("CartId")
@@ -199,9 +155,6 @@ namespace EcommerceTeaShop.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<Guid>("ProductVariantId")
                         .HasColumnType("uniqueidentifier");
 
@@ -212,8 +165,6 @@ namespace EcommerceTeaShop.Repository.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AddonId");
 
                     b.HasIndex("CartId");
 
@@ -313,20 +264,6 @@ namespace EcommerceTeaShop.Repository.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Clients");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
-                            CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "hibana664@gmail.com",
-                            EmailVerified = true,
-                            FullName = "System Admin",
-                            IsDeleted = false,
-                            PasswordHash = "$2a$11$K9LQmT9J5tVn3h6r1mB6yOBXlJfK1z2Yq3cE7U8dR9sT0uV1wX2yG",
-                            Role = "Admin",
-                            Status = "Active"
-                        });
                 });
 
             modelBuilder.Entity("EcommerceTeaShop.Repository.Models.Coupon", b =>
@@ -478,9 +415,6 @@ namespace EcommerceTeaShop.Repository.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("AddonId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -503,8 +437,6 @@ namespace EcommerceTeaShop.Repository.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AddonId");
 
                     b.HasIndex("OrderId");
 
@@ -750,21 +682,11 @@ namespace EcommerceTeaShop.Repository.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EcommerceTeaShop.Repository.Models.Coupon", "Coupon")
-                        .WithMany()
-                        .HasForeignKey("CouponId");
-
                     b.Navigation("Client");
-
-                    b.Navigation("Coupon");
                 });
 
             modelBuilder.Entity("EcommerceTeaShop.Repository.Models.CartItem", b =>
                 {
-                    b.HasOne("EcommerceTeaShop.Repository.Models.Addon", "Addon")
-                        .WithMany()
-                        .HasForeignKey("AddonId");
-
                     b.HasOne("EcommerceTeaShop.Repository.Models.Cart", "Cart")
                         .WithMany("CartItems")
                         .HasForeignKey("CartId")
@@ -776,8 +698,6 @@ namespace EcommerceTeaShop.Repository.Migrations
                         .HasForeignKey("ProductVariantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Addon");
 
                     b.Navigation("Cart");
 
@@ -814,10 +734,6 @@ namespace EcommerceTeaShop.Repository.Migrations
 
             modelBuilder.Entity("EcommerceTeaShop.Repository.Models.OrderDetails", b =>
                 {
-                    b.HasOne("EcommerceTeaShop.Repository.Models.Addon", "Addon")
-                        .WithMany()
-                        .HasForeignKey("AddonId");
-
                     b.HasOne("EcommerceTeaShop.Repository.Models.Order", "Order")
                         .WithMany("OrderDetails")
                         .HasForeignKey("OrderId")
@@ -829,8 +745,6 @@ namespace EcommerceTeaShop.Repository.Migrations
                         .HasForeignKey("ProductVariantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Addon");
 
                     b.Navigation("Order");
 

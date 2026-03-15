@@ -145,6 +145,14 @@ TeaVault System
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             return new ResponseDTO { IsSucess = false, Message = "Sai mật khẩu." };
+        if (user.Status == "Blocked")
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                Message = "Tài khoản của bạn đã bị khóa."
+            };
+        }
 
         var accessToken = _jwtHelper.GenerateToken(new JwtUser
         {
