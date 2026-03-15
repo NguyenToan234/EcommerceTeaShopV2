@@ -16,5 +16,8 @@ namespace EcommerceTeaShop.Service.Contract
         Task<ResponseDTO> UpdateQuantityAsync(Guid clientId, UpdateCartItemDTO dto);
 
         Task<ResponseDTO> RemoveItemAsync(Guid clientId, Guid cartItemId);
+        Task<ResponseDTO> ApplyCouponAsync(Guid clientId, string code);
+
+        Task<ResponseDTO> RemoveCouponAsync(Guid clientId);
     }
 }

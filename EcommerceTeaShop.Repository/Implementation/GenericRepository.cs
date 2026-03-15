@@ -150,7 +150,22 @@ namespace EcommerceTeaShop.Repository.Implementation
 
 
         }
+        public async Task<List<T>> GetListByExpression(
+    Expression<Func<T, bool>> filter,
+    params Expression<Func<T, object>>[]? includeProperties)
+        {
+            IQueryable<T> query = _dbSet;
 
+            if (includeProperties != null)
+            {
+                foreach (var include in includeProperties)
+                {
+                    query = query.Include(include);
+                }
+            }
+
+            return await query.Where(filter).ToListAsync();
+        }
 
         public IQueryable<T> AsQueryable()
         {

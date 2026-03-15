@@ -6,6 +6,7 @@ using System.Security.Claims;
 
 [ApiController]
 [Route("api/auth")]
+
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
@@ -57,6 +58,8 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+
+    [Authorize(Roles = "Admin,User")]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(LogoutRequest request)
     {
@@ -64,6 +67,7 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize(Roles = "Admin,User")]
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
     {

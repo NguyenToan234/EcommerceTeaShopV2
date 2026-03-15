@@ -23,8 +23,54 @@ public class AddressService : IAddressService
 
         try
         {
+            // Validate dữ liệu
+            if (dto == null)
+            {
+                response.IsSucess = false;
+                response.Message = "Dữ liệu không hợp lệ";
+                return response;
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.FullName))
+            {
+                response.IsSucess = false;
+                response.Message = "Tên người nhận không được để trống";
+                return response;
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Phone))
+            {
+                response.IsSucess = false;
+                response.Message = "Số điện thoại không được để trống";
+                return response;
+            }
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(dto.Phone, @"^0\d{9}$"))
+            {
+                response.IsSucess = false;
+                response.Message = "Số điện thoại không hợp lệ";
+                return response;
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.AddressLine))
+            {
+                response.IsSucess = false;
+                response.Message = "Địa chỉ không được để trống";
+                return response;
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.City) ||
+                string.IsNullOrWhiteSpace(dto.District) ||
+                string.IsNullOrWhiteSpace(dto.Ward))
+            {
+                response.IsSucess = false;
+                response.Message = "Vui lòng nhập đầy đủ Tỉnh/Thành, Quận/Huyện, Phường/Xã";
+                return response;
+            }
+
             var db = _addressRepository.GetDbContext();
 
+            // Nếu set default thì bỏ default cũ
             if (dto.IsDefault)
             {
                 var oldDefault = await db.Set<Addresses>()
@@ -41,12 +87,12 @@ public class AddressService : IAddressService
             {
                 Id = Guid.NewGuid(),
                 ClientId = clientId,
-                FullName = dto.FullName,
-                Phone = dto.Phone,
-                AddressLine = dto.AddressLine,
-                City = dto.City,
-                District = dto.District,
-                Ward = dto.Ward,
+                FullName = dto.FullName.Trim(),
+                Phone = dto.Phone.Trim(),
+                AddressLine = dto.AddressLine.Trim(),
+                City = dto.City.Trim(),
+                District = dto.District.Trim(),
+                Ward = dto.Ward.Trim(),
                 IsDefault = dto.IsDefault
             };
 
@@ -65,7 +111,6 @@ public class AddressService : IAddressService
 
         return response;
     }
-
     public async Task<ResponseDTO> GetMyAddressesAsync(Guid clientId)
     {
         ResponseDTO response = new();

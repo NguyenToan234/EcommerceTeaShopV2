@@ -7,7 +7,7 @@ using System.Security.Claims;
 
 [Route("api/order")]
 [ApiController]
-[Authorize]
+[Authorize(Roles = "User")]
 public class OrderController : ControllerBase
 {
     private readonly IOrderService _orderService;

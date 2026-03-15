@@ -54,12 +54,27 @@ namespace EcommerceTeaShop.Repository.DB
 
         //}
 
+
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<ProductVariant>()
                 .ToTable("ProductVariant");
+
+            modelBuilder.Entity<Client>().HasData(
+                new Client
+                {
+                    Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                    FullName = "System Admin",
+                    Email = "hibana664@gmail.com",
+                    PasswordHash = "$2a$11$K9LQmT9J5tVn3h6r1mB6yOBXlJfK1z2Yq3cE7U8dR9sT0uV1wX2yG",
+                    Role = "Admin",
+                    EmailVerified = true
+                }
+            );
         }
     }
 }

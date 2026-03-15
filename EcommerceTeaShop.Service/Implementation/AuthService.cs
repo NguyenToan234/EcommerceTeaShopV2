@@ -15,7 +15,6 @@ public class AuthService : IAuthService
     private readonly IEmailService _emailService;
     private readonly JwtHelper _jwtHelper;
 
-    private const string ADMIN_EMAIL = "hibana664@gmail.com";
 
     public AuthService(
         IGenericRepository<Client> clientRepo,
@@ -34,6 +33,8 @@ public class AuthService : IAuthService
     // REGISTER
     public async Task<ResponseDTO> RegisterAsync(RegisterRequest request)
     {
+        request.Email = request.Email.Trim().ToLower();
+
         var exist = await _clientRepo.GetFirstByExpression(x => x.Email == request.Email);
 
         if (exist != null)
@@ -54,7 +55,7 @@ public class AuthService : IAuthService
             FullName = request.FullName,
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = request.Email == ADMIN_EMAIL ? "Admin" : "User",
+            Role = "User",
             EmailVerified = false,
             EmailOtp = otp,
             EmailOtpExpiry = DateTime.UtcNow.AddMinutes(5)
@@ -64,21 +65,17 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangeAsync();
 
         await _emailService.SendEmailAsync(
-     client.Email,
-     "Xác thực tài khoản TeaVault",
-     $@"
+            client.Email,
+            "Xác thực tài khoản TeaVault",
+    $@"
 Xin chào {client.FullName},
 
 Mã OTP xác thực tài khoản của bạn là: {otp}
 
 OTP có hiệu lực trong 5 phút.
 
-Nếu bạn không yêu cầu đăng ký tài khoản,
-vui lòng bỏ qua email này.
-
 TeaVault System
-"
- );
+");
 
         return new ResponseDTO
         {
@@ -86,7 +83,6 @@ TeaVault System
             Message = "Đăng ký thành công. Kiểm tra email để lấy OTP."
         };
     }
-
     // VERIFY OTP
     public async Task<ResponseDTO> VerifyOtpAsync(VerifyOtpRequest request)
     {
@@ -102,6 +98,8 @@ TeaVault System
             return new ResponseDTO { IsSucess = false, Message = "OTP đã hết hạn." };
 
         user.EmailVerified = true;
+        user.EmailOtp = null;
+        user.EmailOtpExpiry = null;
 
         await _clientRepo.Update(user);
         await _unitOfWork.SaveChangeAsync();
@@ -111,7 +109,6 @@ TeaVault System
             Message = "Xác thực email thành công."
         };
     }
-
     // RESEND OTP
     public async Task<ResponseDTO> ResendOtpAsync(ResendOtpRequest request)
     {
@@ -136,6 +133,8 @@ TeaVault System
     // LOGIN
     public async Task<ResponseDTO> LoginAsync(LoginRequest request)
     {
+        request.Email = request.Email.Trim().ToLower();
+
         var user = await _clientRepo.GetFirstByExpression(x => x.Email == request.Email);
 
         if (user == null)
@@ -156,6 +155,13 @@ TeaVault System
 
         var refreshToken = GenerateRefreshToken();
 
+        var oldTokens = await _refreshRepo.GetListByExpression(x => x.ClientId == user.Id && !x.IsRevoked);
+
+        foreach (var t in oldTokens)
+        {
+            t.IsRevoked = true;
+        }
+
         await _refreshRepo.Insert(new RefreshToken
         {
             Id = Guid.NewGuid(),
@@ -163,8 +169,6 @@ TeaVault System
             Token = refreshToken,
             ExpiryDate = DateTime.UtcNow.AddDays(7)
         });
-
-        await _unitOfWork.SaveChangeAsync();
 
         return new ResponseDTO
         {
@@ -177,12 +181,11 @@ TeaVault System
             }
         };
     }
-
     public async Task<ResponseDTO> RefreshTokenAsync(RefreshTokenRequest request)
     {
         var token = await _refreshRepo.GetFirstByExpression(x => x.Token == request.RefreshToken);
 
-        if (token == null || token.ExpiryDate < DateTime.UtcNow)
+        if (token == null || token.IsRevoked || token.ExpiryDate < DateTime.UtcNow)
             return new ResponseDTO { IsSucess = false, Message = "Refresh token không hợp lệ." };
 
         var user = await _clientRepo.GetById(token.ClientId);
@@ -205,14 +208,13 @@ TeaVault System
             }
         };
     }
-
     // LOGOUT
     public async Task<ResponseDTO> LogoutAsync(LogoutRequest request)
     {
         var token = await _refreshRepo.GetFirstByExpression(x => x.Token == request.RefreshToken);
 
-        if (token == null)
-            return new ResponseDTO { IsSucess = false, Message = "Token không tồn tại." };
+        if (token == null || token.IsRevoked)
+            return new ResponseDTO { IsSucess = false, Message = "Token không hợp lệ." };
 
         token.IsRevoked = true;
 
@@ -221,7 +223,6 @@ TeaVault System
 
         return new ResponseDTO { Message = "Đăng xuất thành công." };
     }
-
     private string GenerateRefreshToken()
     {
         var random = new byte[64];
@@ -295,6 +296,15 @@ TeaVault System
                 Message = "Email không tồn tại."
             };
 
+        if (user.EmailOtpExpiry != null && user.EmailOtpExpiry > DateTime.UtcNow)
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                Message = "OTP vừa được gửi. Vui lòng thử lại sau."
+            };
+        }
+
         var otp = OtpGenerator.GenerateOtp();
 
         user.EmailOtp = otp;
@@ -314,7 +324,6 @@ TeaVault System
             Message = "OTP đặt lại mật khẩu đã được gửi."
         };
     }
-
     public async Task<ResponseDTO> ResetPasswordAsync(ResetPasswordRequest request)
     {
         var user = await _clientRepo.GetFirstByExpression(x => x.Email == request.Email);
@@ -329,6 +338,8 @@ TeaVault System
             return new ResponseDTO { IsSucess = false, Message = "OTP đã hết hạn." };
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        user.EmailOtp = null;
+        user.EmailOtpExpiry = null;
 
         await _clientRepo.Update(user);
         await _unitOfWork.SaveChangeAsync();
@@ -338,7 +349,6 @@ TeaVault System
             Message = "Đặt lại mật khẩu thành công."
         };
     }
-
     public async Task<ResponseDTO> ChangePasswordAsync(Guid userId, ChangePasswordRequest request)
     {
         var user = await _clientRepo.GetById(userId);
