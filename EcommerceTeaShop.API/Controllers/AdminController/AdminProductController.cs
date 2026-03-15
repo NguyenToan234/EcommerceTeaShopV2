@@ -68,5 +68,11 @@ namespace EcommerceTeaShop.API.Controllers.AdminController
             var result = await _service.SetMainImageAsync(imageId);
             return StatusCode(result.IsSucess ? 200 : 400, result);
         }
+        [HttpPut("update-variant/{variantId:guid}")]
+        public async Task<IActionResult> UpdateVariant(Guid variantId, [FromBody] UpdateVariantDTO dto)
+        {
+            var result = await _service.UpdateVariantAsync(variantId, dto);
+            return StatusCode(result.IsSucess ? 200 : 400, result);
+        }
     }
 }

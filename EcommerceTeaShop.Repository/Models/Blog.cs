@@ -15,5 +15,6 @@ namespace EcommerceTeaShop.Repository.Models
         public string Thumbnail { get; set; }
 
         public DateTime PublishDate { get; set; }
+        public bool IsPublished { get; set; } = true;
     }
 }
