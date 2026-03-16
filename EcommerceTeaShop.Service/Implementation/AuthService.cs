@@ -43,6 +43,16 @@ public class AuthService : IAuthService
             return false;
         }
     }
+
+
+    private bool IsStrongPassword(string password)
+    {
+        var regex = new System.Text.RegularExpressions.Regex(
+            @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$"
+        );
+
+        return regex.IsMatch(password);
+    }
     // REGISTER
     public async Task<ResponseDTO> RegisterAsync(RegisterRequest request)
     {
@@ -60,6 +70,8 @@ public class AuthService : IAuthService
             return new ResponseDTO
             {
                 IsSucess = false,
+                BusinessCode = BusinessCode.VALIDATION_FAILED,
+
                 Message = "Họ và tên không được để trống."
             };
         }
@@ -69,6 +81,8 @@ public class AuthService : IAuthService
             return new ResponseDTO
             {
                 IsSucess = false,
+                BusinessCode = BusinessCode.VALIDATION_FAILED,
+
                 Message = "Email không được để trống."
             };
         }
@@ -78,6 +92,7 @@ public class AuthService : IAuthService
             return new ResponseDTO
             {
                 IsSucess = false,
+                BusinessCode = BusinessCode.VALIDATION_FAILED,
                 Message = "Email không đúng định dạng."
             };
         }
@@ -87,16 +102,19 @@ public class AuthService : IAuthService
             return new ResponseDTO
             {
                 IsSucess = false,
+                BusinessCode = BusinessCode.VALIDATION_FAILED,
+
                 Message = "Mật khẩu không được để trống."
             };
         }
 
-        if (request.Password.Length < 6)
+        if (!IsStrongPassword(request.Password))
         {
             return new ResponseDTO
             {
                 IsSucess = false,
-                Message = "Mật khẩu phải có ít nhất 6 ký tự."
+                BusinessCode = BusinessCode.VALIDATION_FAILED,
+                Message = "Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt."
             };
         }
 

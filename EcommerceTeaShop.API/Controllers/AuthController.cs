@@ -1,4 +1,5 @@
 ﻿using EcommerceTeaShop.Common.DTOs;
+using EcommerceTeaShop.Common.DTOs.BusinessCode;
 using EcommerceTeaShop.Service.Contract;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,7 +21,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register(RegisterRequest request)
     {
         var result = await _authService.RegisterAsync(request);
-        return Ok(result);
+        return StatusFromResult(result);
     }
 
     [HttpPost("verify-otp")]
@@ -91,5 +92,31 @@ public class AuthController : ControllerBase
         var result = await _authService.ChangePasswordAsync(userId, request);
 
         return Ok(result);
+    }
+
+
+
+
+    private IActionResult StatusFromResult(ResponseDTO result)
+    {
+        return result.BusinessCode switch
+        {
+            BusinessCode.VALIDATION_FAILED => BadRequest(result),
+
+            BusinessCode.EXISTED_USER => Conflict(result),
+
+            BusinessCode.DATA_NOT_FOUND => NotFound(result),
+
+            BusinessCode.EXCEPTION => StatusCode(500, result),
+
+            BusinessCode.INSERT_SUCESSFULLY => StatusCode(201, result),
+
+            BusinessCode.GET_DATA_SUCCESSFULLY or
+            BusinessCode.UPDATE_SUCESSFULLY or
+            BusinessCode.DELETE_SUCESSFULLY
+                => Ok(result),
+
+            _ => Ok(result)
+        };
     }
 }
