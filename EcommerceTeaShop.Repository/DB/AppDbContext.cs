@@ -1,4 +1,6 @@
-﻿using EcommerceTeaShop.Repository.Models;
+﻿using BCrypt.Net;
+using EcommerceTeaShop.Repository.Models;
+using FirebaseAdmin.Auth.Hash;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -31,6 +33,7 @@ namespace EcommerceTeaShop.Repository.DB
         public DbSet<Wishlist> Wishlists { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Addresses> Addresses { get; set; }
+        public DbSet<Banner> Banners { get; set; }
 
         //protected override void OnModelCreating(ModelBuilder modelBuilder)
         //{
@@ -64,17 +67,36 @@ namespace EcommerceTeaShop.Repository.DB
             modelBuilder.Entity<ProductVariant>()
                 .ToTable("ProductVariant");
 
+            string password = "Admin@123";
+            string hash = BCrypt.Net.BCrypt.HashPassword(password);
+
             modelBuilder.Entity<Client>().HasData(
                 new Client
                 {
                     Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-                    FullName = "System Admin",
-                    Email = "hibana664@gmail.com",
-                    PasswordHash = "$2a$11$K9LQmT9J5tVn3h6r1mB6yOBXlJfK1z2Yq3cE7U8dR9sT0uV1wX2yG",
+                    FullName = "Super Admin",
+                    Email = "admin@teashop.com",
+                    PasswordHash = hash,
                     Role = "Admin",
-                    EmailVerified = true
+                    EmailVerified = true,
+                    Status = "Active",
+                    CreatedAt = DateTime.UtcNow,
+                    IsDeleted = false
+                },
+                new Client
+                {
+                    Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+                    FullName = "Second Admin",
+                    Email = "admin2@teashop.com",
+                    PasswordHash = hash,
+                    Role = "Admin",
+                    EmailVerified = true,
+                    Status = "Active",
+                    CreatedAt = DateTime.UtcNow,
+                    IsDeleted = false
                 }
-            );
+            
+             );
         }
     }
 }
