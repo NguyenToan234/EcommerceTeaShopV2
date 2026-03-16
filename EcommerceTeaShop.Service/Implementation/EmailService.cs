@@ -1,43 +1,43 @@
-﻿using EcommerceTeaShop.Service.Contract;
+﻿using EcommerceTeaShop.Common.Settings;
+using EcommerceTeaShop.Service.Contract;
+using MailKit.Security;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using MimeKit;
 using System.Net;
-using System.Net.Mail;
-
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
 public class EmailService : IEmailService
 {
-    private readonly IConfiguration _configuration;
+    private readonly EmailSettings _settings;
 
-    public EmailService(IConfiguration configuration)
+    public EmailService(IOptions<EmailSettings> options)
     {
-        _configuration = configuration;
+        _settings = options.Value;
     }
 
-    public async Task SendEmailAsync(string to, string subject, string body)
+    public async Task SendEmailAsync(string toEmail, string subject, string body)
     {
-        var smtp = new SmtpClient(
-            _configuration["Email:Host"],
-            int.Parse(_configuration["Email:Port"])
-        )
+        var message = new MimeMessage();
+
+        message.From.Add(new MailboxAddress(_settings.SenderName, _settings.SenderEmail));
+        message.To.Add(MailboxAddress.Parse(toEmail));
+        message.Subject = subject;
+
+        message.Body = new TextPart("html")
         {
-            Credentials = new NetworkCredential(
-                _configuration["Email:Username"],
-                _configuration["Email:Password"]
-            ),
-            EnableSsl = true,
-            UseDefaultCredentials = false,
-            DeliveryMethod = SmtpDeliveryMethod.Network
+            Text = body
         };
 
-        var message = new MailMessage
-        {
-            From = new MailAddress(_configuration["Email:Username"], "TeaVault System"),
-            Subject = subject,
-            Body = body,
-            IsBodyHtml = false
-        };
+        using var smtp = new SmtpClient();
 
-        message.To.Add(to);
+        await smtp.ConnectAsync(_settings.SmtpServer, _settings.Port, SecureSocketOptions.StartTls);
 
-        await smtp.SendMailAsync(message);
+        await smtp.AuthenticateAsync(_settings.Username, _settings.Password);
+
+        await smtp.SendAsync(message);
+
+        await smtp.DisconnectAsync(true);
     }
 }
