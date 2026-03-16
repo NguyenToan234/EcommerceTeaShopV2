@@ -30,9 +30,76 @@ public class AuthService : IAuthService
         _jwtHelper = jwtHelper;
     }
 
+
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
     // REGISTER
     public async Task<ResponseDTO> RegisterAsync(RegisterRequest request)
     {
+        if (request == null)
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                Message = "Dữ liệu gửi lên không hợp lệ."
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(request.FullName))
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                Message = "Họ và tên không được để trống."
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Email))
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                Message = "Email không được để trống."
+            };
+        }
+
+        if (!IsValidEmail(request.Email))
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                Message = "Email không đúng định dạng."
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Password))
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                Message = "Mật khẩu không được để trống."
+            };
+        }
+
+        if (request.Password.Length < 6)
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                Message = "Mật khẩu phải có ít nhất 6 ký tự."
+            };
+        }
+
         request.Email = request.Email.Trim().ToLower();
 
         var exist = await _clientRepo.GetFirstByExpression(x => x.Email == request.Email);
@@ -80,10 +147,9 @@ TeaVault System
         return new ResponseDTO
         {
             BusinessCode = BusinessCode.SIGN_UP_SUCCESSFULLY,
-            Message = "Đăng ký thành công. Kiểm tra email để lấy OTP."
+            Message = "Đăng ký thành công. Vui lòng kiểm tra email để lấy mã OTP."
         };
-    }
-    // VERIFY OTP
+    }    // VERIFY OTP
     public async Task<ResponseDTO> VerifyOtpAsync(VerifyOtpRequest request)
     {
         var user = await _clientRepo.GetFirstByExpression(x => x.Email == request.Email);
