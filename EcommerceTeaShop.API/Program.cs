@@ -67,6 +67,11 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IAddressService, AddressService>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<IAdminProductService, AdminProductService>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<IAddonService, AddonService>();
+
+
+
 builder.Services.AddScoped<IBlogService, BlogService>();
 builder.Services.AddHttpClient<PaymentService>();
 builder.Services.AddScoped<IAdminBlogService, AdminBlogService>();
