@@ -72,7 +72,6 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IAddonService, AddonService>();
 
 
-
 builder.Services.AddScoped<IBlogService, BlogService>();
 builder.Services.AddHttpClient<PaymentService>();
 builder.Services.AddScoped<IAdminBlogService, AdminBlogService>();

@@ -1,13 +1,10 @@
 ﻿using EcommerceTeaShop.Common.Settings;
 using EcommerceTeaShop.Service.Contract;
-using MailKit.Security;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
-using MimeKit;
-using System.Net;
 using MailKit.Net.Smtp;
 using MailKit.Security;
+using Microsoft.Extensions.Options;
 using MimeKit;
+
 public class EmailService : IEmailService
 {
     private readonly EmailSettings _settings;
@@ -19,32 +16,45 @@ public class EmailService : IEmailService
 
     public async Task SendEmailAsync(string toEmail, string subject, string body)
     {
-        var message = new MimeMessage();
-
-        message.From.Add(new MailboxAddress(_settings.SenderName, _settings.SenderEmail));
-        message.To.Add(MailboxAddress.Parse(toEmail));
-        message.Subject = subject;
-
-        message.Body = new TextPart("html")
+        try
         {
-            Text = body
-        };
+            var message = new MimeMessage();
 
-        using var smtp = new SmtpClient();
+            message.From.Add(new MailboxAddress(
+                _settings.SenderName,
+                _settings.SenderEmail
+            ));
 
-        await smtp.ConnectAsync(
-            _settings.SmtpServer,
-            _settings.Port,
-            SecureSocketOptions.StartTlsWhenAvailable
-        );
+            message.To.Add(MailboxAddress.Parse(toEmail));
 
-        await smtp.AuthenticateAsync(
-            _settings.Username,
-            _settings.Password
-        );
+            message.Subject = subject;
 
-        await smtp.SendAsync(message);
+            message.Body = new TextPart("html")
+            {
+                Text = body
+            };
 
-        await smtp.DisconnectAsync(true);
+            using var smtp = new SmtpClient();
+
+            await smtp.ConnectAsync(
+                _settings.SmtpServer,
+                _settings.Port,
+                SecureSocketOptions.StartTls
+            );
+
+            await smtp.AuthenticateAsync(
+                _settings.Username,
+                _settings.Password
+            );
+
+            await smtp.SendAsync(message);
+
+            await smtp.DisconnectAsync(true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("EMAIL ERROR: " + ex.Message);
+            throw;
+        }
     }
 }
