@@ -1,5 +1,6 @@
 ﻿using CloudinaryDotNet;
 using EcommerceTeaShop.Common.DTOs;
+using EcommerceTeaShop.Common.Settings;
 using EcommerceTeaShop.Repository.Contract;
 using EcommerceTeaShop.Repository.DB;
 using EcommerceTeaShop.Repository.Implementation;
@@ -78,7 +79,8 @@ builder.Services.AddScoped<IAdminBlogService, AdminBlogService>();
 builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 
-
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings"));
 builder.Services.Configure<CloudinarySettings>(
     builder.Configuration.GetSection("CloudinarySettings")
 );
