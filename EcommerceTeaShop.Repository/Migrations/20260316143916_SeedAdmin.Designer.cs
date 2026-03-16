@@ -4,6 +4,7 @@ using EcommerceTeaShop.Repository.DB;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EcommerceTeaShop.Repository.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260316143916_SeedAdmin")]
+    partial class SeedAdmin
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -102,46 +105,6 @@ namespace EcommerceTeaShop.Repository.Migrations
                     b.HasIndex("ClientId");
 
                     b.ToTable("Addresses");
-                });
-
-            modelBuilder.Entity("EcommerceTeaShop.Repository.Models.Banner", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ImageUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("RedirectUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("StartDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Banners");
                 });
 
             modelBuilder.Entity("EcommerceTeaShop.Repository.Models.Blog", b =>
@@ -358,24 +321,24 @@ namespace EcommerceTeaShop.Repository.Migrations
                         new
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
-                            CreatedAt = new DateTime(2026, 3, 16, 15, 4, 19, 665, DateTimeKind.Utc).AddTicks(5262),
+                            CreatedAt = new DateTime(2026, 3, 16, 14, 39, 15, 316, DateTimeKind.Utc).AddTicks(9973),
                             Email = "admin@teashop.com",
                             EmailVerified = true,
                             FullName = "Super Admin",
                             IsDeleted = false,
-                            PasswordHash = "$2a$11$1RIuSI9LoDehzwkHA67c8.sOtwuNH56JKxt7qB1R/m8OddR4rUf0y",
+                            PasswordHash = "$2a$11$bTdnecxozSnr8zYxYV7yc.foxJjApoeWPhA4h821.DMukCvIfYPGm",
                             Role = "Admin",
                             Status = "Active"
                         },
                         new
                         {
                             Id = new Guid("22222222-2222-2222-2222-222222222222"),
-                            CreatedAt = new DateTime(2026, 3, 16, 15, 4, 19, 665, DateTimeKind.Utc).AddTicks(5269),
+                            CreatedAt = new DateTime(2026, 3, 16, 14, 39, 15, 316, DateTimeKind.Utc).AddTicks(9983),
                             Email = "admin2@teashop.com",
                             EmailVerified = true,
                             FullName = "Second Admin",
                             IsDeleted = false,
-                            PasswordHash = "$2a$11$1RIuSI9LoDehzwkHA67c8.sOtwuNH56JKxt7qB1R/m8OddR4rUf0y",
+                            PasswordHash = "$2a$11$bTdnecxozSnr8zYxYV7yc.foxJjApoeWPhA4h821.DMukCvIfYPGm",
                             Role = "Admin",
                             Status = "Active"
                         });

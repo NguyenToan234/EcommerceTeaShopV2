@@ -70,6 +70,7 @@ builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<IAdminProductService, AdminProductService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IAddonService, AddonService>();
+builder.Services.AddScoped<IAdminBannerService, AdminBannerService>();
 
 
 builder.Services.AddScoped<IBlogService, BlogService>();
