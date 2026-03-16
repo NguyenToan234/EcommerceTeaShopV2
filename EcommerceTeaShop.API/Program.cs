@@ -71,7 +71,12 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IAddonService, AddonService>();
 
 
+
+builder.Services.AddScoped<IBlogService, BlogService>();
 builder.Services.AddHttpClient<PaymentService>();
+builder.Services.AddScoped<IAdminBlogService, AdminBlogService>();
+builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 
 
 builder.Services.Configure<CloudinarySettings>(
