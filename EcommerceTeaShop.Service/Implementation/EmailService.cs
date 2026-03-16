@@ -23,20 +23,17 @@ public class EmailService : IEmailService
                 _configuration["Email:Username"],
                 _configuration["Email:Password"]
             ),
-            EnableSsl = true
+            EnableSsl = true,
+            UseDefaultCredentials = false,
+            DeliveryMethod = SmtpDeliveryMethod.Network
         };
-
-        var from = new MailAddress(
-            _configuration["Email:Username"],
-            "TeaVault System" // tên hiển thị
-        );
 
         var message = new MailMessage
         {
-            From = from,
+            From = new MailAddress(_configuration["Email:Username"], "TeaVault System"),
             Subject = subject,
             Body = body,
-            IsBodyHtml = true
+            IsBodyHtml = false
         };
 
         message.To.Add(to);

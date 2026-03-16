@@ -61,9 +61,13 @@ public class AuthService : IAuthService
             return new ResponseDTO
             {
                 IsSucess = false,
+                BusinessCode = BusinessCode.VALIDATION_FAILED,
                 Message = "Dữ liệu gửi lên không hợp lệ."
             };
         }
+
+        request.FullName = request.FullName?.Trim();
+        request.Email = request.Email?.Trim().ToLower();
 
         if (string.IsNullOrWhiteSpace(request.FullName))
         {
@@ -71,7 +75,6 @@ public class AuthService : IAuthService
             {
                 IsSucess = false,
                 BusinessCode = BusinessCode.VALIDATION_FAILED,
-
                 Message = "Họ và tên không được để trống."
             };
         }
@@ -82,7 +85,6 @@ public class AuthService : IAuthService
             {
                 IsSucess = false,
                 BusinessCode = BusinessCode.VALIDATION_FAILED,
-
                 Message = "Email không được để trống."
             };
         }
@@ -103,7 +105,6 @@ public class AuthService : IAuthService
             {
                 IsSucess = false,
                 BusinessCode = BusinessCode.VALIDATION_FAILED,
-
                 Message = "Mật khẩu không được để trống."
             };
         }
@@ -118,12 +119,20 @@ public class AuthService : IAuthService
             };
         }
 
-        request.Email = request.Email.Trim().ToLower();
-
         var exist = await _clientRepo.GetFirstByExpression(x => x.Email == request.Email);
 
         if (exist != null)
         {
+            if (!exist.EmailVerified)
+            {
+                return new ResponseDTO
+                {
+                    IsSucess = false,
+                    BusinessCode = BusinessCode.VALIDATION_FAILED,
+                    Message = "Email đã đăng ký nhưng chưa xác thực. Vui lòng kiểm tra OTP."
+                };
+            }
+
             return new ResponseDTO
             {
                 IsSucess = false,
@@ -146,35 +155,36 @@ public class AuthService : IAuthService
             EmailOtpExpiry = DateTime.UtcNow.AddMinutes(5)
         };
 
-        await _clientRepo.Insert(client);
-        await _unitOfWork.SaveChangeAsync();
-
         try
         {
             await _emailService.SendEmailAsync(
                 client.Email,
                 "Xác thực tài khoản TeaVault",
-        $@"
-Xin chào {client.FullName},
+    $@"
+<h2>TeaVault</h2>
+<p>Xin chào <b>{client.FullName}</b></p>
+<p>Mã OTP của bạn là:</p>
 
-Mã OTP xác thực tài khoản của bạn là: {otp}
+<h1>{otp}</h1>
 
-OTP có hiệu lực trong 5 phút.
-
-TeaVault System
-");
+<p>OTP có hiệu lực trong 5 phút.</p>
+"
+            );
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            Console.WriteLine(ex);
 
             return new ResponseDTO
             {
                 IsSucess = false,
                 BusinessCode = BusinessCode.EXCEPTION,
-                Message = "Không thể gửi email OTP. Vui lòng thử lại."
+                Message = "Không thể gửi email OTP."
             };
         }
+
+        await _clientRepo.Insert(client);
+        await _unitOfWork.SaveChangeAsync();
 
         return new ResponseDTO
         {
@@ -182,21 +192,51 @@ TeaVault System
             BusinessCode = BusinessCode.SIGN_UP_SUCCESSFULLY,
             Message = "Đăng ký thành công. Vui lòng kiểm tra email để lấy mã OTP."
         };
-    }    // VERIFY OTP
+    }
     public async Task<ResponseDTO> VerifyOtpAsync(VerifyOtpRequest request)
     {
+        request.Email = request.Email?.Trim().ToLower();
+
         var user = await _clientRepo.GetFirstByExpression(x => x.Email == request.Email);
 
         if (user == null)
-            return new ResponseDTO { IsSucess = false, Message = "Không tìm thấy user." };
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                BusinessCode = BusinessCode.DATA_NOT_FOUND,
+                Message = "Không tìm thấy user."
+            };
+        }
+
+        if (user.EmailVerified)
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                Message = "Email đã được xác thực."
+            };
+        }
 
         if (user.EmailOtp != request.Otp)
-            return new ResponseDTO { IsSucess = false,
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
                 BusinessCode = BusinessCode.VALIDATION_FAILED,
-                Message = "OTP không đúng." };
+                Message = "OTP không đúng."
+            };
+        }
 
-        if (user.EmailOtpExpiry < DateTime.UtcNow)
-            return new ResponseDTO { IsSucess = false, Message = "OTP đã hết hạn." };
+        if (user.EmailOtpExpiry == null || user.EmailOtpExpiry < DateTime.UtcNow)
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                BusinessCode = BusinessCode.VALIDATION_FAILED,
+                Message = "OTP đã hết hạn."
+            };
+        }
 
         user.EmailVerified = true;
         user.EmailOtp = null;
@@ -207,16 +247,35 @@ TeaVault System
 
         return new ResponseDTO
         {
+            IsSucess = true,
+            BusinessCode = BusinessCode.UPDATE_SUCESSFULLY,
             Message = "Xác thực email thành công."
         };
-    }
-    // RESEND OTP
+    }    // RESEND OTP
     public async Task<ResponseDTO> ResendOtpAsync(ResendOtpRequest request)
     {
+        request.Email = request.Email?.Trim().ToLower();
+
         var user = await _clientRepo.GetFirstByExpression(x => x.Email == request.Email);
 
         if (user == null)
-            return new ResponseDTO { IsSucess = false, Message = "Không tìm thấy user." };
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                BusinessCode = BusinessCode.DATA_NOT_FOUND,
+                Message = "Không tìm thấy user."
+            };
+        }
+
+        if (user.EmailVerified)
+        {
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                Message = "Email đã được xác thực."
+            };
+        }
 
         var otp = OtpGenerator.GenerateOtp();
 
@@ -226,11 +285,25 @@ TeaVault System
         await _clientRepo.Update(user);
         await _unitOfWork.SaveChangeAsync();
 
-        await _emailService.SendEmailAsync(user.Email, "OTP mới", $"OTP: {otp}");
+        await _emailService.SendEmailAsync(
+            user.Email,
+            "OTP mới từ TeaVault",
+    $@"
+<h2>TeaVault</h2>
+<p>Mã OTP mới của bạn:</p>
 
-        return new ResponseDTO { Message = "OTP mới đã được gửi." };
+<h1>{otp}</h1>
+
+<p>OTP có hiệu lực trong 5 phút.</p>
+"
+        );
+
+        return new ResponseDTO
+        {
+            IsSucess = true,
+            Message = "OTP mới đã được gửi."
+        };
     }
-
     // LOGIN
     public async Task<ResponseDTO> LoginAsync(LoginRequest request)
     {
