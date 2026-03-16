@@ -149,10 +149,12 @@ public class AuthService : IAuthService
         await _clientRepo.Insert(client);
         await _unitOfWork.SaveChangeAsync();
 
-        await _emailService.SendEmailAsync(
-            client.Email,
-            "Xác thực tài khoản TeaVault",
-    $@"
+        try
+        {
+            await _emailService.SendEmailAsync(
+                client.Email,
+                "Xác thực tài khoản TeaVault",
+        $@"
 Xin chào {client.FullName},
 
 Mã OTP xác thực tài khoản của bạn là: {otp}
@@ -161,9 +163,22 @@ OTP có hiệu lực trong 5 phút.
 
 TeaVault System
 ");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+
+            return new ResponseDTO
+            {
+                IsSucess = false,
+                BusinessCode = BusinessCode.EXCEPTION,
+                Message = "Không thể gửi email OTP. Vui lòng thử lại."
+            };
+        }
 
         return new ResponseDTO
         {
+            IsSucess = true,
             BusinessCode = BusinessCode.SIGN_UP_SUCCESSFULLY,
             Message = "Đăng ký thành công. Vui lòng kiểm tra email để lấy mã OTP."
         };
@@ -176,7 +191,9 @@ TeaVault System
             return new ResponseDTO { IsSucess = false, Message = "Không tìm thấy user." };
 
         if (user.EmailOtp != request.Otp)
-            return new ResponseDTO { IsSucess = false, Message = "OTP không đúng." };
+            return new ResponseDTO { IsSucess = false,
+                BusinessCode = BusinessCode.VALIDATION_FAILED,
+                Message = "OTP không đúng." };
 
         if (user.EmailOtpExpiry < DateTime.UtcNow)
             return new ResponseDTO { IsSucess = false, Message = "OTP đã hết hạn." };
