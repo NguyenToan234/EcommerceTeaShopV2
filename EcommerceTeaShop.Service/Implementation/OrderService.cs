@@ -5,7 +5,7 @@ using EcommerceTeaShop.Repository.Models;
 using EcommerceTeaShop.Repository.Models.EnumModels;
 using EcommerceTeaShop.Service.Contract;
 using Microsoft.EntityFrameworkCore;
-
+using EcommerceTeaShop.Common.DTOs.Enums;
 public class OrderService : IOrderService
 {
     private readonly IGenericRepository<Order> _orderRepository;
@@ -13,15 +13,19 @@ public class OrderService : IOrderService
     private readonly IGenericRepository<Cart> _cartRepository;
     private readonly IGenericRepository<Product> _productRepository;
     private readonly PaymentService _paymentService;
+        private readonly ITransactionService _transactionService;
     private readonly IUnitOfWork _unitOfWork;
+        private readonly ICartService _cartService;
 
     public OrderService(
-        IGenericRepository<Order> orderRepository,
-        IGenericRepository<OrderDetails> orderDetailsRepository,
-        IGenericRepository<Cart> cartRepository,
-        IGenericRepository<Product> productRepository,
-        IUnitOfWork unitOfWork,
-        PaymentService paymentService)
+      IGenericRepository<Order> orderRepository,
+      IGenericRepository<OrderDetails> orderDetailsRepository,
+      IGenericRepository<Cart> cartRepository,
+      IGenericRepository<Product> productRepository,
+      IUnitOfWork unitOfWork,
+      PaymentService paymentService,
+      ITransactionService transactionService,
+      ICartService cartService)
     {
         _orderRepository = orderRepository;
         _orderDetailsRepository = orderDetailsRepository;
@@ -29,6 +33,8 @@ public class OrderService : IOrderService
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
         _paymentService = paymentService;
+        _transactionService = transactionService;
+        _cartService = cartService;
     }
 
     public async Task<ResponseDTO> CheckoutAsync(Guid clientId, Guid addressId)
@@ -39,11 +45,13 @@ public class OrderService : IOrderService
         {
             var db = _orderRepository.GetDbContext();
 
+            await _cartService.GetCartAsync(clientId);
+
             var cart = await db.Set<Cart>()
-                .Include(x => x.CartItems)
-                    .ThenInclude(ci => ci.ProductVariant)
-                    .ThenInclude(v => v.Product)
-                .FirstOrDefaultAsync(x => x.ClientId == clientId);
+     .Include(x => x.CartItems)
+         .ThenInclude(ci => ci.ProductVariant)
+         .ThenInclude(v => v.Product)
+     .FirstOrDefaultAsync(x => x.ClientId == clientId);
 
             if (cart == null || !cart.CartItems.Any())
             {
@@ -119,7 +127,8 @@ public class OrderService : IOrderService
                     OrderId = order.Id,
                     ProductVariantId = item.ProductVariantId,
                     Quantity = item.Quantity,
-                    Price = item.ProductVariant.Price
+                    Price = item.Price,
+                    AddonId = item.AddonId
                 };
 
                 await _orderDetailsRepository.Insert(orderDetail);
@@ -285,6 +294,14 @@ public class OrderService : IOrderService
 
             // 🟢 Lock order
             order.Status = OrderStatus.Paid;
+
+            await _transactionService.CreateTransactionAsync(
+    order.Id,
+    order.TotalPrice,
+    orderCode.ToString(),
+    EcommerceTeaShop.Common.DTOs.Enums.PaymentMethod.PayOS,
+    "PayOS"
+);
 
             foreach (var item in order.OrderDetails)
             {

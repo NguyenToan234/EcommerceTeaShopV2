@@ -36,9 +36,8 @@ public class CartService : ICartService
             .Include(x => x.ProductVariant)
             .ToListAsync();
 
-        var total = items
-            .Where(x => x.ProductVariant != null)
-            .Sum(x => x.ProductVariant.Price * x.Quantity);
+        var total = items.Sum(x => x.Price * x.Quantity);
+
         cart.TotalAmount = total;
 
         if (cart.CouponId == null)
@@ -85,7 +84,6 @@ public class CartService : ICartService
             if (dto.Quantity <= 0)
             {
                 response.IsSucess = false;
-                response.BusinessCode = BusinessCode.VALIDATION_FAILED;
                 response.Message = "Số lượng không hợp lệ.";
                 return response;
             }
@@ -99,17 +97,32 @@ public class CartService : ICartService
             if (variant == null)
             {
                 response.IsSucess = false;
-                response.BusinessCode = BusinessCode.DATA_NOT_FOUND;
-                response.Message = "Không tìm thấy biến thể sản phẩm.";
+                response.Message = "Không tìm thấy biến thể.";
                 return response;
             }
 
             if (!variant.Product.IsActive)
             {
                 response.IsSucess = false;
-                response.BusinessCode = BusinessCode.INVALID_ACTION;
                 response.Message = "Sản phẩm đã ngừng bán.";
                 return response;
+            }
+
+            decimal price = variant.Price;
+
+            if (dto.AddonId != null)
+            {
+                var addon = await db.Set<Addon>()
+                    .FirstOrDefaultAsync(x => x.Id == dto.AddonId && x.IsActive);
+
+                if (addon == null)
+                {
+                    response.IsSucess = false;
+                    response.Message = "Thiết kế không hợp lệ.";
+                    return response;
+                }
+
+                price += addon.Price;
             }
 
             var cart = await db.Set<Cart>()
@@ -128,8 +141,9 @@ public class CartService : ICartService
                 await _cartRepository.Insert(cart);
             }
 
-            var cartItem = cart.CartItems
-                .FirstOrDefault(x => x.ProductVariantId == dto.ProductVariantId);
+            var cartItem = cart.CartItems.FirstOrDefault(x =>
+                x.ProductVariantId == dto.ProductVariantId &&
+                x.AddonId == dto.AddonId);
 
             var newQuantity = cartItem != null
                 ? cartItem.Quantity + dto.Quantity
@@ -138,8 +152,7 @@ public class CartService : ICartService
             if (variant.StockQuantity < newQuantity)
             {
                 response.IsSucess = false;
-                response.BusinessCode = BusinessCode.INVALID_ACTION;
-                response.Message = "Sản phẩm không đủ tồn kho.";
+                response.Message = "Không đủ tồn kho.";
                 return response;
             }
 
@@ -154,7 +167,9 @@ public class CartService : ICartService
                     Id = Guid.NewGuid(),
                     CartId = cart.Id,
                     ProductVariantId = dto.ProductVariantId,
-                    Quantity = dto.Quantity
+                    AddonId = dto.AddonId,
+                    Quantity = dto.Quantity,
+                    Price = price
                 };
 
                 await _cartItemRepository.Insert(cartItem);
@@ -166,13 +181,11 @@ public class CartService : ICartService
             await _unitOfWork.SaveChangeAsync();
 
             response.IsSucess = true;
-            response.BusinessCode = BusinessCode.INSERT_SUCESSFULLY;
             response.Message = "Thêm vào giỏ hàng thành công.";
         }
         catch (Exception ex)
         {
             response.IsSucess = false;
-            response.BusinessCode = BusinessCode.EXCEPTION;
             response.Message = ex.Message;
         }
 
@@ -188,32 +201,37 @@ public class CartService : ICartService
             var db = _cartRepository.GetDbContext();
 
             var cart = await db.Set<Cart>()
-                .Include(x => x.CartItems)
-                    .ThenInclude(ci => ci.ProductVariant)
-                    .ThenInclude(v => v.Product)
-                .FirstOrDefaultAsync(x => x.ClientId == clientId);
+     .Include(x => x.CartItems)
+         .ThenInclude(ci => ci.ProductVariant)
+             .ThenInclude(v => v.Product)
+     .Include(x => x.CartItems)
+         .ThenInclude(ci => ci.Addon)
+     .FirstOrDefaultAsync(x => x.ClientId == clientId);
+
+            if (cart != null)
+            {
+                await RecalculateCartAsync(cart);
+            }
 
             if (cart == null || !cart.CartItems.Any())
             {
                 response.IsSucess = false;
-                response.BusinessCode = BusinessCode.DATA_NOT_FOUND;
                 response.Message = "Giỏ hàng trống.";
                 return response;
             }
 
-            var items = cart.CartItems
-                .Select(x => new ReadCartItemDTO
-                {
-                    CartItemId = x.Id,
-                    ProductVariantId = x.ProductVariantId,
-                    ProductName = x.ProductVariant.Product.Name,
-                    Gram = x.ProductVariant.Gram,
-                    Price = x.ProductVariant.Price,
-                    Quantity = x.Quantity
-                }).ToList();
+            var items = cart.CartItems.Select(x => new ReadCartItemDTO
+            {
+                CartItemId = x.Id,
+                ProductVariantId = x.ProductVariantId,
+                ProductName = x.ProductVariant.Product.Name,
+                Gram = x.ProductVariant.Gram,
+                AddonName = x.Addon != null ? x.Addon.Name : null,
+                Price = x.Price,
+                Quantity = x.Quantity
+            }).ToList();
 
             response.IsSucess = true;
-            response.BusinessCode = BusinessCode.GET_DATA_SUCCESSFULLY;
             response.Data = new
             {
                 Items = items,
@@ -226,7 +244,6 @@ public class CartService : ICartService
         catch (Exception ex)
         {
             response.IsSucess = false;
-            response.BusinessCode = BusinessCode.EXCEPTION;
             response.Message = ex.Message;
         }
 
