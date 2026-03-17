@@ -172,13 +172,13 @@ public class CartService : ICartService
                     Price = price
                 };
 
-                await _cartItemRepository.Insert(cartItem);
+                cart.CartItems.Add(cartItem); // ✅ FIX
             }
 
             await RecalculateCartAsync(cart);
 
-            await _cartRepository.Update(cart);
-            await _unitOfWork.SaveChangeAsync();
+            await _cartRepository.Insert(cart);
+            await _unitOfWork.SaveChangeAsync(); // ✅ đảm bảo cart tồn tại DB
 
             response.IsSucess = true;
             response.Message = "Thêm vào giỏ hàng thành công.";
