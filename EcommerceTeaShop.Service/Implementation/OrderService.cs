@@ -37,7 +37,7 @@ public class OrderService : IOrderService
         _cartService = cartService;
     }
 
-    public async Task<ResponseDTO> CheckoutAsync(Guid clientId, Guid addressId)
+    public async Task<ResponseDTO> CheckoutAsync(Guid clientId, Guid addressId, List<Guid>? cartItemIds)
     {
         ResponseDTO response = new();
 
@@ -45,13 +45,12 @@ public class OrderService : IOrderService
         {
             var db = _orderRepository.GetDbContext();
 
-            await _cartService.GetCartAsync(clientId);
-
+            // 1. Lấy cart
             var cart = await db.Set<Cart>()
-     .Include(x => x.CartItems)
-         .ThenInclude(ci => ci.ProductVariant)
-         .ThenInclude(v => v.Product)
-     .FirstOrDefaultAsync(x => x.ClientId == clientId);
+                .Include(x => x.CartItems)
+                    .ThenInclude(ci => ci.ProductVariant)
+                    .ThenInclude(v => v.Product)
+                .FirstOrDefaultAsync(x => x.ClientId == clientId);
 
             if (cart == null || !cart.CartItems.Any())
             {
@@ -60,6 +59,19 @@ public class OrderService : IOrderService
                 return response;
             }
 
+            // 🔥 2. Chọn item (giữ logic cũ nếu không truyền gì)
+            var selectedItems = (cartItemIds == null || !cartItemIds.Any())
+                ? cart.CartItems.ToList() // giữ nguyên logic cũ
+                : cart.CartItems.Where(x => cartItemIds.Contains(x.Id)).ToList();
+
+            if (!selectedItems.Any())
+            {
+                response.IsSucess = false;
+                response.Message = "Không có sản phẩm nào được chọn.";
+                return response;
+            }
+
+            // 3. Lấy address
             var address = await db.Set<Addresses>()
                 .FirstOrDefaultAsync(x => x.Id == addressId && x.ClientId == clientId);
 
@@ -70,8 +82,8 @@ public class OrderService : IOrderService
                 return response;
             }
 
-            // check stock
-            foreach (var item in cart.CartItems)
+            // 4. Check stock
+            foreach (var item in selectedItems)
             {
                 if (item.ProductVariant.StockQuantity < item.Quantity)
                 {
@@ -81,10 +93,8 @@ public class OrderService : IOrderService
                 }
             }
 
-            long orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
-            // dùng giá đã tính trong cart (đã có coupon)
-            var totalPrice = cart.FinalAmount;
+            // 🔥 5. Tính tiền theo selected items
+            var totalPrice = selectedItems.Sum(x => x.Price * x.Quantity);
 
             if (totalPrice < 2000)
             {
@@ -92,13 +102,10 @@ public class OrderService : IOrderService
                 response.Message = "Số tiền phải >= 2000.";
                 return response;
             }
-            if (cart.FinalAmount <= 0)
-            {
-                response.IsSucess = false;
-                response.Message = "Cart không hợp lệ.";
-                return response;
-            }
 
+            long orderCode = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+            // 6. Tạo order
             var order = new Order
             {
                 Id = Guid.NewGuid(),
@@ -119,7 +126,8 @@ public class OrderService : IOrderService
 
             await _orderRepository.Insert(order);
 
-            foreach (var item in cart.CartItems)
+            // 7. OrderDetails
+            foreach (var item in selectedItems)
             {
                 var orderDetail = new OrderDetails
                 {
@@ -132,10 +140,20 @@ public class OrderService : IOrderService
                 };
 
                 await _orderDetailsRepository.Insert(orderDetail);
+
+                // (optional) trừ stock
+                item.ProductVariant.StockQuantity -= item.Quantity;
+            }
+
+            // 🔥 8. Chỉ xóa những item đã checkout (KHÔNG phá cart cũ)
+            foreach (var item in selectedItems)
+            {
+                cart.CartItems.Remove(item);
             }
 
             await _unitOfWork.SaveChangeAsync();
 
+            // 9. Payment
             var checkoutUrl = await _paymentService.CreatePaymentLink(
                 orderCode,
                 (int)totalPrice
@@ -157,7 +175,6 @@ public class OrderService : IOrderService
 
         return response;
     }
-
     public async Task<ResponseDTO> GetMyOrdersAsync(Guid clientId)
     {
         ResponseDTO response = new();

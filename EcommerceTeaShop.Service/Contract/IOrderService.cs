@@ -9,8 +9,8 @@ namespace EcommerceTeaShop.Service.Contract
 {
     public interface IOrderService
     {
-        Task<ResponseDTO> CheckoutAsync(Guid clientId, Guid addressId);
-            Task<ResponseDTO> GetMyOrdersAsync(Guid clientId);
+        Task<ResponseDTO> CheckoutAsync(Guid clientId, Guid addressId, List<Guid> cartItemIds);
+        Task<ResponseDTO> GetMyOrdersAsync(Guid clientId);
 
         Task<ResponseDTO> GetOrderByCodeAsync(long orderCode);
 

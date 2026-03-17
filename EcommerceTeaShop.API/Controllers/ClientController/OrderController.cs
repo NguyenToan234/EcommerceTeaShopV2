@@ -33,7 +33,7 @@ public class OrderController : ControllerBase
         }
 
         var clientId = Guid.Parse(claim.Value);
-        var result = await _orderService.CheckoutAsync(clientId, dto.AddressId);
+        var result = await _orderService.CheckoutAsync(clientId, dto.AddressId,dto.CartItemIds);
 
         return Ok(result);
     }
