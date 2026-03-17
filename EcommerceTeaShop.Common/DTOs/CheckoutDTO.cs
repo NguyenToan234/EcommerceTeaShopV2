@@ -9,5 +9,7 @@ namespace EcommerceTeaShop.Common.DTOs
     public class CheckoutDTO
     {
         public Guid AddressId { get; set; }
+        public List<Guid>? CartItemIds { get; set; }
+
     }
 }

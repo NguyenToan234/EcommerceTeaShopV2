@@ -29,12 +29,8 @@ public class CartService : ICartService
 
     private async Task RecalculateCartAsync(Cart cart)
     {
-        var db = _cartRepository.GetDbContext();
-
-        var items = await db.Set<CartItem>()
-            .Where(x => x.CartId == cart.Id)
-            .Include(x => x.ProductVariant)
-            .ToListAsync();
+        // ❗ dùng navigation đã track
+        var items = cart.CartItems;
 
         var total = items.Sum(x => x.Price * x.Quantity);
 
@@ -47,7 +43,8 @@ public class CartService : ICartService
             return;
         }
 
-        var coupon = await db.Set<Coupon>()
+        var coupon = await _couponRepository
+            .AsQueryable()
             .FirstOrDefaultAsync(x => x.Id == cart.CouponId && x.IsActive);
 
         if (coupon == null)
@@ -74,7 +71,6 @@ public class CartService : ICartService
         cart.DiscountAmount = discount;
         cart.FinalAmount = total - discount;
     }
-
     public async Task<ResponseDTO> AddToCartAsync(Guid clientId, AddToCartDTO dto)
     {
         ResponseDTO response = new();
@@ -90,6 +86,7 @@ public class CartService : ICartService
 
             var db = _cartRepository.GetDbContext();
 
+            // 1. Lấy variant
             var variant = await db.Set<ProductVariant>()
                 .Include(x => x.Product)
                 .FirstOrDefaultAsync(x => x.Id == dto.ProductVariantId);
@@ -110,6 +107,7 @@ public class CartService : ICartService
 
             decimal price = variant.Price;
 
+            // 2. Addon
             if (dto.AddonId != null)
             {
                 var addon = await db.Set<Addon>()
@@ -125,10 +123,12 @@ public class CartService : ICartService
                 price += addon.Price;
             }
 
+            // 3. Lấy cart
             var cart = await db.Set<Cart>()
                 .Include(x => x.CartItems)
                 .FirstOrDefaultAsync(x => x.ClientId == clientId);
 
+            // 4. Nếu chưa có cart → tạo mới
             if (cart == null)
             {
                 cart = new Cart
@@ -138,9 +138,12 @@ public class CartService : ICartService
                     CartItems = new List<CartItem>()
                 };
 
-                await _cartRepository.Insert(cart);
+                await _cartRepository.Insert(cart); // ✅ chỉ insert ở đây
+                await _unitOfWork.SaveChangeAsync(); // ✅ THÊM DÒNG NÀY
+
             }
 
+            // 5. Tìm cartItem
             var cartItem = cart.CartItems.FirstOrDefault(x =>
                 x.ProductVariantId == dto.ProductVariantId &&
                 x.AddonId == dto.AddonId);
@@ -149,6 +152,7 @@ public class CartService : ICartService
                 ? cartItem.Quantity + dto.Quantity
                 : dto.Quantity;
 
+            // 6. Check stock
             if (variant.StockQuantity < newQuantity)
             {
                 response.IsSucess = false;
@@ -156,6 +160,7 @@ public class CartService : ICartService
                 return response;
             }
 
+            // 7. Update hoặc add mới
             if (cartItem != null)
             {
                 cartItem.Quantity += dto.Quantity;
@@ -172,13 +177,16 @@ public class CartService : ICartService
                     Price = price
                 };
 
-                cart.CartItems.Add(cartItem); // ✅ FIX
+                cart.CartItems.Add(cartItem); // giữ
+
+                await _cartItemRepository.Insert(cartItem); // 🔥 THÊM DÒNG NÀY
             }
 
+            // 8. Recalculate
             await RecalculateCartAsync(cart);
 
-            await _cartRepository.Insert(cart);
-            await _unitOfWork.SaveChangeAsync(); // ✅ đảm bảo cart tồn tại DB
+            // ❗ KHÔNG gọi Update/Insert thêm lần nào nữa
+            await _unitOfWork.SaveChangeAsync();
 
             response.IsSucess = true;
             response.Message = "Thêm vào giỏ hàng thành công.";
@@ -186,12 +194,11 @@ public class CartService : ICartService
         catch (Exception ex)
         {
             response.IsSucess = false;
-            response.Message = ex.Message;
+            response.Message = ex.InnerException?.Message ?? ex.Message;
         }
 
         return response;
     }
-
     public async Task<ResponseDTO> GetCartAsync(Guid clientId)
     {
         ResponseDTO response = new();
@@ -289,7 +296,6 @@ public class CartService : ICartService
 
             cartItem.Quantity = dto.Quantity;
 
-            await _cartItemRepository.Update(cartItem);
 
             await RecalculateCartAsync(cartItem.Cart);
 
@@ -397,7 +403,6 @@ public class CartService : ICartService
 
             await RecalculateCartAsync(cart);
 
-            await _cartRepository.Update(cart);
             await _unitOfWork.SaveChangeAsync();
 
             response.IsSucess = true;
@@ -442,7 +447,6 @@ public class CartService : ICartService
 
             await RecalculateCartAsync(cart);
 
-            await _cartRepository.Update(cart);
             await _unitOfWork.SaveChangeAsync();
 
             response.IsSucess = true;
