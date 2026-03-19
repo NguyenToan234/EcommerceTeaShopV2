@@ -73,7 +73,7 @@ builder.Services.AddScoped<IAddonService, AddonService>();
 builder.Services.AddScoped<IAdminBannerService, AdminBannerService>();
 builder.Services.AddScoped<IAdminAddonService, AdminAddonService>();
 builder.Services.AddScoped<IUserRatingService, UserRatingService>();
-
+builder.Services.AddScoped<IAdminOrderService, AdminOrderService>();
 
 builder.Services.AddScoped<IBlogService, BlogService>();
 builder.Services.AddHttpClient<PaymentService>();

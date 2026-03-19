@@ -11,5 +11,6 @@ namespace EcommerceTeaShop.Service.Contract
     {
         Task<ResponseDTO> CreateRatingAsync(Guid clientId, CreateRatingDTO dto);
         Task<ResponseDTO> GetProductRatingsAsync(Guid productId);
+        Task<ResponseDTO> GetMyProductsForRatingAsync(Guid clientId);
     }
 }
