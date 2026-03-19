@@ -2,6 +2,7 @@
 using EcommerceTeaShop.Common.DTOs.BusinessCode;
 using EcommerceTeaShop.Repository.Contract;
 using EcommerceTeaShop.Repository.Models;
+using EcommerceTeaShop.Repository.Models.EnumModels;
 using EcommerceTeaShop.Service.Contract;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -47,9 +48,10 @@ namespace EcommerceTeaShop.Service.Implementation
                 // 🔥 CHECK user đã mua sản phẩm chưa
                 var hasPurchased = await db.Set<Order>()
                     .Include(o => o.OrderDetails)
+                        .ThenInclude(d => d.ProductVariant)
                     .AnyAsync(o =>
                         o.ClientId == clientId &&
-                        o.Status == Repository.Models.EnumModels.OrderStatus.Paid &&
+                        o.Status == OrderStatus.Paid &&
                         o.OrderDetails.Any(d => d.ProductVariant.ProductId == dto.ProductId)
                     );
 
@@ -62,9 +64,10 @@ namespace EcommerceTeaShop.Service.Implementation
 
                 // 🔥 CHECK đã rating chưa (chống spam)
                 var existed = await _ratingRepo.AsQueryable()
-                    .AnyAsync(x =>
-                        x.ClientId == clientId &&
-                        x.ProductId == dto.ProductId);
+                       .AnyAsync(x =>
+                           x.ClientId == clientId &&
+                           x.ProductId == dto.ProductId &&
+                           !x.IsDeleted);
 
                 if (existed)
                 {
@@ -102,6 +105,55 @@ namespace EcommerceTeaShop.Service.Implementation
             return res;
         }
 
+        public async Task<ResponseDTO> GetMyProductsForRatingAsync(Guid clientId)
+        {
+            ResponseDTO res = new();
+
+            try
+            {
+                var db = _orderRepo.GetDbContext();
+
+                // 🔥 Lấy tất cả sản phẩm đã mua (Paid)
+                var purchasedProducts = await db.Set<Order>()
+                    .Include(o => o.OrderDetails)
+                        .ThenInclude(d => d.ProductVariant)
+                        .ThenInclude(v => v.Product)
+                    .Where(o => o.ClientId == clientId &&
+                                o.Status == OrderStatus.Paid)
+                    .SelectMany(o => o.OrderDetails)
+                    .Select(d => new
+                    {
+                        ProductId = d.ProductVariant.Product.Id,
+                        ProductName = d.ProductVariant.Product.Name
+                    })
+                    .Distinct()
+                    .ToListAsync();
+
+                // 🔥 Lấy sản phẩm đã rating
+                var ratedProductIds = await _ratingRepo.AsQueryable()
+                    .Where(x => x.ClientId == clientId && !x.IsDeleted)
+                    .Select(x => x.ProductId)
+                    .ToListAsync();
+
+                // 🔥 Lọc ra chưa rating
+                var result = purchasedProducts
+                    .Where(p => !ratedProductIds.Contains(p.ProductId))
+                    .ToList();
+
+                res.IsSucess = true;
+                res.BusinessCode = BusinessCode.GET_DATA_SUCCESSFULLY;
+                res.Data = result;
+            }
+            catch (Exception ex)
+            {
+                res.IsSucess = false;
+                res.BusinessCode = BusinessCode.EXCEPTION;
+                res.Message = ex.InnerException?.Message ?? ex.Message;
+            }
+
+            return res;
+        }
+
         public async Task<ResponseDTO> GetProductRatingsAsync(Guid productId)
         {
             ResponseDTO res = new();
@@ -126,15 +178,23 @@ namespace EcommerceTeaShop.Service.Implementation
                     })
                     .ToListAsync();
 
+                // ⭐ AVG
+                var avg = ratings.Any() ? ratings.Average(x => x.Star) : 0;
+
                 res.IsSucess = true;
                 res.BusinessCode = BusinessCode.GET_DATA_SUCCESSFULLY;
-                res.Data = ratings;
+                res.Data = new
+                {
+                    AverageRating = Math.Round(avg, 1),
+                    TotalReviews = ratings.Count,
+                    Items = ratings
+                };
             }
             catch (Exception ex)
             {
                 res.IsSucess = false;
                 res.BusinessCode = BusinessCode.EXCEPTION;
-                res.Message = ex.InnerException?.Message ?? ex.Message;
+                res.Message = ex.Message;
             }
 
             return res;

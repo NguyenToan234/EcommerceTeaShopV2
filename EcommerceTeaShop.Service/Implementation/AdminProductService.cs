@@ -352,13 +352,12 @@ namespace EcommerceTeaShop.Service.Implementation
                     return res;
                 }
 
+                // 🔥 update basic info
                 if (dto.Name != null)
                     product.Name = dto.Name;
 
                 if (dto.Description != null)
                     product.Description = dto.Description;
-
-               
 
                 if (dto.CategoryId != null)
                     product.CategoryId = dto.CategoryId.Value;
@@ -368,18 +367,47 @@ namespace EcommerceTeaShop.Service.Implementation
 
                 product.UpdatedAt = DateTime.UtcNow;
 
+                // 🔥 UPDATE IMAGE (QUAN TRỌNG)
+                if (dto.NewImages != null && dto.NewImages.Any())
+                {
+                    var db = _imageRepo.GetDbContext();
+
+                    // ❌ XÓA ảnh cũ
+                    var oldImages = await db.Set<Image>()
+                        .Where(x => x.ProductId == product.Id)
+                        .ToListAsync();
+
+                    if (oldImages.Any())
+                    {
+                        await _imageRepo.DeleteRange(oldImages);
+                    }
+
+                    // ✅ ADD ảnh mới
+                    int index = 0;
+
+                    foreach (var file in dto.NewImages)
+                    {
+                        var url = await _cloudinary.UploadImageAsync(file, "tea-products");
+
+                        await _imageRepo.Insert(new Image
+                        {
+                            Id = Guid.NewGuid(),
+                            ProductId = product.Id,
+                            ImageUrl = url,
+                            IsMain = index == 0,
+                            CreatedAt = DateTime.UtcNow
+                        });
+
+                        index++;
+                    }
+                }
+
                 await _productRepo.Update(product);
                 await _unitOfWork.SaveChangeAsync();
 
                 res.IsSucess = true;
                 res.BusinessCode = BusinessCode.UPDATE_SUCESSFULLY;
                 res.Message = "Cập nhật sản phẩm thành công.";
-                res.Data = new
-                {
-                    ProductId = product.Id,
-                    product.Name
-                    
-                };
             }
             catch (Exception ex)
             {
