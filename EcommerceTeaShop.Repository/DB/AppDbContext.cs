@@ -17,7 +17,8 @@ namespace EcommerceTeaShop.Repository.DB
         {
         }
 
-
+        public DbSet<Addon> Addons { get; set; }
+        public DbSet<ProductAddon> ProductAddons { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<ProductVariant> ProductVariants { get; set; }
         public DbSet<Client> Clients { get; set; }
@@ -97,6 +98,8 @@ namespace EcommerceTeaShop.Repository.DB
                 }
             
              );
+            modelBuilder.Entity<ProductAddon>()
+        .HasKey(pa => new { pa.ProductId, pa.AddonId });
         }
     }
 }
