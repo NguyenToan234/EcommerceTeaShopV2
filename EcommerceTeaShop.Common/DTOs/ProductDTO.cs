@@ -56,7 +56,7 @@ namespace EcommerceTeaShop.Common.DTOs
         public string CategoryName { get; set; }
         public bool IsActive { get; set; }
 
-        public List<string> Images { get; set; }
+        public List<string> Images { get; set; } = new();
     }
     public class UpdateVariantDTO
     {

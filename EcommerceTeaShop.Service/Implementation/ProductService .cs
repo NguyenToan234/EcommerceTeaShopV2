@@ -27,8 +27,10 @@ public class ProductService : IProductService
             var db = _productRepository.GetDbContext();
 
             var query = db.Set<Product>()
-                .Include(x => x.Category)
-                .Where(x => x.IsActive);
+     .Include(x => x.Category)
+     .Include(x => x.Images)
+     .Include(x => x.Variants) // ✅ thêm dòng này
+     .Where(x => x.IsActive);
 
             var totalItems = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
@@ -44,9 +46,16 @@ public class ProductService : IProductService
                 ProductId = p.Id,
                 Name = p.Name,
                 Description = p.Description,
-                //Price = p.Price,
-                //StockQuantity = p.StockQuantity,
-                CategoryName = p.Category.Name
+                CategoryName = p.Category.Name,
+                IsActive = p.IsActive,
+
+                Images = p.Images?.Select(i => i.ImageUrl).ToList() ?? new(),
+
+                Price = p.Variants?.Any() == true
+          ? p.Variants.Min(v => v.Price)
+          : 0,
+
+                StockQuantity = p.Variants?.Sum(v => v.StockQuantity) ?? 0
             });
 
             dto.IsSucess = true;
@@ -81,6 +90,8 @@ public class ProductService : IProductService
 
             var product = await db.Set<Product>()
                 .Include(x => x.Category)
+                    .Include(x => x.Images) // ✅ thêm dòng này
+
                 .Include(x => x.Variants)
                 .FirstOrDefaultAsync(x => x.Id == id && x.IsActive);
 
@@ -102,15 +113,22 @@ public class ProductService : IProductService
                 description = product.Description,
                 categoryName = product.Category.Name,
 
+                images = product.Images.Select(i => new
+                {
+                    imageId = i.Id,
+                    url = i.ImageUrl,
+                    isMain = i.IsMain
+                }),
+
                 variants = product.Variants
-                    .Where(v => !v.IsDeleted)
-                    .Select(v => new
-                    {
-                        variantId = v.Id,
-                        gram = v.Gram,
-                        price = v.Price,
-                        stock = v.StockQuantity
-                    })
+         .Where(v => !v.IsDeleted)
+         .Select(v => new
+         {
+             variantId = v.Id,
+             gram = v.Gram,
+             price = v.Price,
+             stock = v.StockQuantity
+         })
             };
         }
         catch (Exception ex)
@@ -130,14 +148,19 @@ public class ProductService : IProductService
         {
             var db = _productRepository.GetDbContext();
 
+            keyword = keyword?.Trim().ToLower() ?? "";
+
             var query = db.Set<Product>()
                 .Include(x => x.Category)
-                .Where(x => x.Name.ToLower().Contains(keyword.ToLower()));
+                .Include(x => x.Images)
+                .Include(x => x.Variants)
+                .Where(x => x.IsActive && x.Name.ToLower().Contains(keyword));
 
             var totalItems = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
             var data = await query
+                .OrderByDescending(x => x.CreatedAt)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -155,14 +178,28 @@ public class ProductService : IProductService
                 ProductId = p.Id,
                 Name = p.Name,
                 Description = p.Description,
-                //Price = p.Price,
-                //StockQuantity = p.StockQuantity,
-                CategoryName = p.Category.Name
+                CategoryName = p.Category.Name,
+                IsActive = p.IsActive,
+
+                Images = p.Images?.Select(i => i.ImageUrl).ToList() ?? new(),
+
+                Price = p.Variants?.Any() == true
+                    ? p.Variants.Min(v => v.Price)
+                    : 0,
+
+                StockQuantity = p.Variants?.Sum(v => v.StockQuantity) ?? 0
             });
 
             dto.IsSucess = true;
             dto.BusinessCode = BusinessCode.GET_DATA_SUCCESSFULLY;
-            dto.Data = mapped;
+            dto.Data = new
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = totalPages,
+                Items = mapped
+            };
         }
         catch (Exception ex)
         {
@@ -173,7 +210,6 @@ public class ProductService : IProductService
 
         return dto;
     }
-
     public async Task<ResponseDTO> GetProductsByCategoryAsync(Guid categoryId, int pageNumber, int pageSize)
     {
         ResponseDTO dto = new();
