@@ -430,7 +430,9 @@ public class AuthService : IAuthService
                 Email = email,
                 FullName = name,
                 Role = "User",
-                EmailVerified = true
+                EmailVerified = true,
+                    PasswordHash = "" // ✅ thêm dòng này (quick fix)
+
             };
 
             await _clientRepo.Insert(user);
