@@ -25,5 +25,6 @@ namespace EcommerceTeaShop.Repository.Models
 
         public virtual ICollection<Rating> Ratings { get; set; }
         public virtual ICollection<ProductVariant> Variants { get; set; }
+        public virtual ICollection<ProductAddon> ProductAddons { get; set; }
     }
 }

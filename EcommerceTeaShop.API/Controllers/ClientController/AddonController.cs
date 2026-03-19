@@ -12,10 +12,12 @@ namespace EcommerceTeaShop.API.Controllers.ClientController
     public class AddonController : ControllerBase
     {
         private readonly IAddonService _addonService;
+        private readonly IAdminAddonService _adminAddonService;
 
-        public AddonController(IAddonService addonService)
+        public AddonController(IAddonService addonService, IAdminAddonService adminAddonService)
         {
             _addonService = addonService;
+            _adminAddonService = adminAddonService;
         }
 
         [HttpGet]
@@ -23,6 +25,13 @@ namespace EcommerceTeaShop.API.Controllers.ClientController
         {
             var result = await _addonService.GetAddonsAsync();
             return Ok(result);
+        }
+        [AllowAnonymous]
+        [HttpGet("product/{productId:guid}")]
+        public async Task<IActionResult> GetAddonByProduct(Guid productId)
+        {
+            var result = await _adminAddonService.GetAddonByProductAsync(productId);
+            return StatusCode(result.IsSucess ? 200 : 400, result);
         }
     }
 }
