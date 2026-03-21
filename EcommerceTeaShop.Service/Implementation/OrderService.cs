@@ -45,7 +45,7 @@ public class OrderService : IOrderService
         {
             var db = _orderRepository.GetDbContext();
 
-            // 🔥 0. CHECK existing pending order TRƯỚC TIÊN
+            // 🔥 0. CHECK existing pending order
             var existingOrder = await db.Set<Order>()
                 .Where(x => x.ClientId == clientId && x.Status == OrderStatus.Pending)
                 .OrderByDescending(x => x.OrderDate)
@@ -58,11 +58,6 @@ public class OrderService : IOrderService
                 // ⏱ còn hạn 2 phút → reuse
                 if (diff.TotalMinutes <= 2)
                 {
-                    var reuseCheckoutUrl = await _paymentService.CreatePaymentLink(
-    existingOrder.OrderCode,
-    (int)existingOrder.TotalPrice
-);
-
                     return new ResponseDTO
                     {
                         IsSucess = true,
@@ -70,7 +65,7 @@ public class OrderService : IOrderService
                         Data = new
                         {
                             OrderId = existingOrder.Id,
-                            CheckoutUrl = reuseCheckoutUrl
+                            CheckoutUrl = existingOrder.CheckoutUrl // ✅ dùng lại link cũ
                         }
                     };
                 }
@@ -119,7 +114,7 @@ public class OrderService : IOrderService
                 return response;
             }
 
-            // 4. Check stock (CHỈ check, KHÔNG trừ)
+            // 4. Check stock (CHỈ check)
             foreach (var item in selectedItems)
             {
                 if (item.ProductVariant.StockQuantity < item.Quantity)
@@ -179,19 +174,17 @@ public class OrderService : IOrderService
                 await _orderDetailsRepository.Insert(orderDetail);
             }
 
-            // 8. Xóa item đã checkout khỏi cart
-            foreach (var item in selectedItems)
-            {
-                cart.CartItems.Remove(item);
-            }
-
             await _unitOfWork.SaveChangeAsync();
 
-            // 9. Payment
+            // 8. Payment (TẠO 1 LẦN DUY NHẤT)
             var checkoutUrl = await _paymentService.CreatePaymentLink(
                 orderCode,
                 (int)totalPrice
             );
+
+            // 🔥 lưu lại để reuse
+            order.CheckoutUrl = checkoutUrl;
+            await _unitOfWork.SaveChangeAsync();
 
             response.IsSucess = true;
             response.Message = "Đặt hàng thành công.";
