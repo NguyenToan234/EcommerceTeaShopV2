@@ -36,6 +36,8 @@ namespace EcommerceTeaShop.Repository.Models
 
         public string Ward { get; set; }
 
+        public string? CheckoutUrl { get; set; }
+
         public virtual ICollection<OrderDetails> OrderDetails { get; set; }
 
         public virtual ICollection<Transaction> Transactions { get; set; }
