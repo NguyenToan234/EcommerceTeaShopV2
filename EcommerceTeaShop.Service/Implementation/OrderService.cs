@@ -45,6 +45,43 @@ public class OrderService : IOrderService
         {
             var db = _orderRepository.GetDbContext();
 
+            // 🔥 0. CHECK existing pending order TRƯỚC TIÊN
+            var existingOrder = await db.Set<Order>()
+                .Where(x => x.ClientId == clientId && x.Status == OrderStatus.Pending)
+                .OrderByDescending(x => x.OrderDate)
+                .FirstOrDefaultAsync();
+
+            if (existingOrder != null)
+            {
+                var diff = DateTime.UtcNow - existingOrder.OrderDate;
+
+                // ⏱ còn hạn 2 phút → reuse
+                if (diff.TotalMinutes <= 2)
+                {
+                    var reuseCheckoutUrl = await _paymentService.CreatePaymentLink(
+    existingOrder.OrderCode,
+    (int)existingOrder.TotalPrice
+);
+
+                    return new ResponseDTO
+                    {
+                        IsSucess = true,
+                        Message = "Tiếp tục thanh toán đơn cũ",
+                        Data = new
+                        {
+                            OrderId = existingOrder.Id,
+                            CheckoutUrl = reuseCheckoutUrl
+                        }
+                    };
+                }
+                else
+                {
+                    // ⏱ hết hạn → hủy
+                    existingOrder.Status = OrderStatus.Cancelled;
+                    await _unitOfWork.SaveChangeAsync();
+                }
+            }
+
             // 1. Lấy cart
             var cart = await db.Set<Cart>()
                 .Include(x => x.CartItems)
@@ -59,9 +96,9 @@ public class OrderService : IOrderService
                 return response;
             }
 
-            // 🔥 2. Chọn item (giữ logic cũ nếu không truyền gì)
+            // 2. Chọn item
             var selectedItems = (cartItemIds == null || !cartItemIds.Any())
-                ? cart.CartItems.ToList() // giữ nguyên logic cũ
+                ? cart.CartItems.ToList()
                 : cart.CartItems.Where(x => cartItemIds.Contains(x.Id)).ToList();
 
             if (!selectedItems.Any())
@@ -71,7 +108,7 @@ public class OrderService : IOrderService
                 return response;
             }
 
-            // 3. Lấy address
+            // 3. Address
             var address = await db.Set<Addresses>()
                 .FirstOrDefaultAsync(x => x.Id == addressId && x.ClientId == clientId);
 
@@ -82,7 +119,7 @@ public class OrderService : IOrderService
                 return response;
             }
 
-            // 4. Check stock
+            // 4. Check stock (CHỈ check, KHÔNG trừ)
             foreach (var item in selectedItems)
             {
                 if (item.ProductVariant.StockQuantity < item.Quantity)
@@ -93,7 +130,7 @@ public class OrderService : IOrderService
                 }
             }
 
-            // 🔥 5. Tính tiền theo selected items
+            // 5. Tính tiền
             var totalPrice = selectedItems.Sum(x => x.Price * x.Quantity);
 
             if (totalPrice < 2000)
@@ -140,12 +177,9 @@ public class OrderService : IOrderService
                 };
 
                 await _orderDetailsRepository.Insert(orderDetail);
-
-                // (optional) trừ stock
-                item.ProductVariant.StockQuantity -= item.Quantity;
             }
 
-            // 🔥 8. Chỉ xóa những item đã checkout (KHÔNG phá cart cũ)
+            // 8. Xóa item đã checkout khỏi cart
             foreach (var item in selectedItems)
             {
                 cart.CartItems.Remove(item);
