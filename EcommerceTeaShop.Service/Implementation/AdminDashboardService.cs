@@ -32,23 +32,26 @@ namespace EcommerceTeaShop.Service.Implementation
 
             var db = _orderRepo.GetDbContext();
 
-            var totalRevenue = await db.Set<Order>()
-                .Where(x => x.Status == OrderStatus.Completed)
-                .SumAsync(x => x.TotalPrice);
+            // ✅ chỉ lấy đơn đã thanh toán thành công
+            var paidOrders = db.Set<Order>()
+                .Where(x => !x.IsDeleted && x.Status == OrderStatus.Paid);
 
+            // ✅ DOANH THU (bao gồm trà + addon + cả 2)
+            var totalRevenue = await paidOrders
+                .SumAsync(x => (decimal?)x.TotalPrice) ?? 0;
+
+            // ✅ đơn đang xử lý
             var processingOrders = await db.Set<Order>()
-                 .Where(x => !x.IsDeleted &&
-                        (x.Status == OrderStatus.Pending ||
-                         x.Status == OrderStatus.Paid))
-                 .CountAsync();
+        .Where(x => !x.IsDeleted &&
+            (x.Status == OrderStatus.Pending || x.Status == OrderStatus.Paid))
+        .CountAsync();
 
+            // ✅ sản phẩm sắp hết
             var lowStock = await db.Set<ProductVariant>()
                 .Where(x => !x.IsDeleted && x.StockQuantity < 10)
                 .CountAsync();
 
             res.IsSucess = true;
-            res.BusinessCode = BusinessCode.GET_DATA_SUCCESSFULLY;
-
             res.Data = new
             {
                 SalesRevenue = totalRevenue,
@@ -67,8 +70,8 @@ namespace EcommerceTeaShop.Service.Implementation
 
             var data = await db.Set<Order>()
                 .Include(x => x.Client)
-                .Where(x => !x.IsDeleted)
-                .OrderByDescending(x => x.CreatedAt)
+                .Where(x => !x.IsDeleted && x.Status == OrderStatus.Paid)
+                .OrderByDescending(x => x.OrderDate)
                 .Take(5)
                 .Select(x => new
                 {
@@ -95,7 +98,7 @@ namespace EcommerceTeaShop.Service.Implementation
 
             var orders = db.Set<Order>()
                 .Where(x => !x.IsDeleted &&
-                            x.Status == OrderStatus.Completed);
+                            x.Status == OrderStatus.Paid);
 
             var now = DateTime.UtcNow;
 
