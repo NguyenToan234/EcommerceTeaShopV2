@@ -30,7 +30,7 @@ public class ProductService : IProductService
      .Include(x => x.Category)
      .Include(x => x.Images)
      .Include(x => x.Variants) // ✅ thêm dòng này
-     .Where(x => x.IsActive);
+            .Where(x => x.IsActive && !x.IsDeleted);
 
             var totalItems = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
@@ -93,8 +93,7 @@ public class ProductService : IProductService
                     .Include(x => x.Images) // ✅ thêm dòng này
 
                 .Include(x => x.Variants)
-                .FirstOrDefaultAsync(x => x.Id == id && x.IsActive);
-
+.FirstOrDefaultAsync(x => x.Id == id && x.IsActive && !x.IsDeleted);
             if (product == null)
             {
                 dto.IsSucess = false;
@@ -154,8 +153,9 @@ public class ProductService : IProductService
                 .Include(x => x.Category)
                 .Include(x => x.Images)
                 .Include(x => x.Variants)
-                .Where(x => x.IsActive && x.Name.ToLower().Contains(keyword));
-
+.Where(x => x.IsActive
+         && !x.IsDeleted
+         && x.Name.ToLower().Contains(keyword));
             var totalItems = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
@@ -220,8 +220,9 @@ public class ProductService : IProductService
 
             var query = db.Set<Product>()
                 .Include(x => x.Category)
-                .Where(x => x.CategoryId == categoryId);
-
+.Where(x => x.CategoryId == categoryId
+         && x.IsActive
+         && !x.IsDeleted);
             var totalItems = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
 
