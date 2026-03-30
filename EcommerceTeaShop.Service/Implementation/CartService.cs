@@ -211,6 +211,7 @@ public class CartService : ICartService
      .Include(x => x.CartItems)
          .ThenInclude(ci => ci.ProductVariant)
              .ThenInclude(v => v.Product)
+             .ThenInclude(p => p.Images) 
      .Include(x => x.CartItems)
          .ThenInclude(ci => ci.Addon)
      .FirstOrDefaultAsync(x => x.ClientId == clientId);
@@ -235,7 +236,10 @@ public class CartService : ICartService
                 Gram = x.ProductVariant.Gram,
                 AddonName = x.Addon != null ? x.Addon.Name : null,
                 Price = x.Price,
-                Quantity = x.Quantity
+                Quantity = x.Quantity,
+
+                  Image = x.ProductVariant.Product.Images
+        .FirstOrDefault(i => i.IsMain)?.ImageUrl // hoặc FirstOrDefault()
             }).ToList();
 
             response.IsSucess = true;
