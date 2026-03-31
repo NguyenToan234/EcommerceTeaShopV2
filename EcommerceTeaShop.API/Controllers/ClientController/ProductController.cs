@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 [Route("api/product")]
 [ApiController]
-[Authorize(Roles = "User")]
 
 public class ProductController : ControllerBase
 {
